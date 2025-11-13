@@ -5,6 +5,7 @@ Transpiler usando Lark - Versão robusta e formal.
 from pathlib import Path
 from lark import Lark, Tree
 from lark.exceptions import LarkError, UnexpectedToken, UnexpectedCharacters
+import re
 
 from .transformer_lark import MythonTransformer
 
@@ -15,6 +16,71 @@ try:
 except ImportError:
     I18N_AVAILABLE = False
     detect_language = None
+
+
+def normalize_operators(code: str) -> str:
+    """
+    Normaliza expressões naturais para operadores Python simples ANTES do parsing.
+    Isso simplifica o transformer e garante que o Lark receba código já normalizado.
+    """
+    lines = code.split('\n')
+    normalized_lines = []
+    
+    for line in lines:
+        # Normalizar condições em if/elif/while
+        # Buscar padrões como "if X is over Y:", "if X is greater than Y:", etc.
+        if re.search(r'\b(if|elif|while|when|whenever)\s+', line, re.IGNORECASE):
+            # Extrair a condição (tudo entre "if/elif/while" e ":")
+            match = re.search(r'\b(if|elif|while|when|whenever)\s+(.+?)\s*:', line, re.IGNORECASE)
+            if match:
+                keyword = match.group(1)
+                condition = match.group(2)
+                
+                # Normalizar a condição - substituir expressões naturais por operadores Python
+                # Ordem importa: mais longas primeiro
+                # IMPORTANTE: manter espaços ao redor dos operadores para o parser reconhecer
+                replacements = [
+                    (" is greater than or equal to ", " >= "),
+                    (" greater than or equal to ", " >= "),
+                    (" is less than or equal to ", " <= "),
+                    (" less than or equal to ", " <= "),
+                    (" is greater than ", " > "),
+                    (" greater than ", " > "),
+                    (" is less than ", " < "),
+                    (" less than ", " < "),
+                    (" is at least ", " >= "),
+                    (" is at most ", " <= "),
+                    (" is over ", " > "),
+                    (" is above ", " > "),
+                    (" above ", " > "),
+                    (" is under ", " < "),
+                    (" is below ", " < "),
+                    (" is not equal to ", " != "),
+                    (" not equal to ", " != "),
+                    (" equals ", " == "),
+                    (" equal to ", " == "),
+                ]
+                
+                for old, new in replacements:
+                    condition = condition.replace(old, new)
+                
+                # Substituir "is not in" primeiro (antes de "is not")
+                condition = re.sub(r'\bis not in\b', ' not in ', condition, flags=re.IGNORECASE)
+                condition = re.sub(r'\bis not\b', ' != ', condition, flags=re.IGNORECASE)
+                condition = re.sub(r'\bis in\b', ' in ', condition, flags=re.IGNORECASE)
+                
+                # Substituir "is" simples por "==" (mas não se for parte de outras expressões)
+                condition = re.sub(r'\bis\b(?!\s+(?:not|in|over|under|above|below|greater|less|at|equal))', ' == ', condition, flags=re.IGNORECASE)
+                
+                # Limpar espaços múltiplos
+                condition = re.sub(r'\s+', ' ', condition).strip()
+                
+                # Reconstruir a linha
+                line = line[:match.start(2)] + condition + line[match.end(2):]
+        
+        normalized_lines.append(line)
+    
+    return '\n'.join(normalized_lines)
 
 
 def transpile_file(input_path: str, output_path: str = None, lang: str = None) -> str:
@@ -85,6 +151,9 @@ def transpile_file(input_path: str, output_path: str = None, lang: str = None) -
             import warnings
             warnings.warn(f"Não foi possível traduzir código de {lang} para inglês: {e}")
     
+    # Normalizar operadores ANTES do parsing (simplifica o transformer)
+    code = normalize_operators(code)
+    
     # Parsear
     try:
         tree = parser.parse(code)
@@ -111,7 +180,7 @@ def transpile_file(input_path: str, output_path: str = None, lang: str = None) -
     
     # Transformar
     try:
-        transformer = MythonTransformer()
+        transformer = MythonTransformer(source_code=code)
         python_code = transformer.transform(tree)
     except Exception as e:
         raise RuntimeError(f"Erro ao transformar código: {e}")
@@ -157,6 +226,9 @@ def transpile_string(code: str) -> str:
         propagate_positions=True,
     )
     
+    # Normalizar operadores ANTES do parsing (simplifica o transformer)
+    code = normalize_operators(code)
+    
     # Parsear
     try:
         tree = parser.parse(code)
@@ -164,7 +236,7 @@ def transpile_string(code: str) -> str:
         raise SyntaxError(f"Erro de sintaxe: {e}")
     
     # Transformar
-    transformer = MythonTransformer()
+    transformer = MythonTransformer(source_code=code)
     python_code = transformer.transform(tree)
     
     return python_code

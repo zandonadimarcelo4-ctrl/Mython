@@ -17,6 +17,14 @@ except ImportError:
     from mython.transpiler import transpile_file
     LARK_AVAILABLE = False
 
+# Importar sistema de i18n
+try:
+    from mython.i18n import translate_code, detect_language, SUPPORTED_LANGUAGES
+    I18N_AVAILABLE = True
+except ImportError:
+    I18N_AVAILABLE = False
+    SUPPORTED_LANGUAGES = {"en": "English"}
+
 # Configuração da página
 st.set_page_config(
     page_title="Mython IDE",
@@ -59,11 +67,19 @@ st.markdown("""
 st.title("🐍 Mython IDE")
 st.markdown("**Escreva código Mython, veja o Python gerado e execute!**")
 
-# Mostrar status do Lark
-if LARK_AVAILABLE:
-    st.success("✅ Usando transpiler Lark (99% de cobertura Python)")
-else:
-    st.info("ℹ️ Usando transpiler padrão (Lark não disponível)")
+# Mostrar status do Lark e i18n
+col_status1, col_status2 = st.columns(2)
+with col_status1:
+    if LARK_AVAILABLE:
+        st.success("✅ Usando transpiler Lark (99% de cobertura Python)")
+    else:
+        st.info("ℹ️ Usando transpiler padrão (Lark não disponível)")
+
+with col_status2:
+    if I18N_AVAILABLE:
+        st.success("🌍 Sistema de i18n disponível")
+    else:
+        st.info("ℹ️ Sistema de i18n não disponível")
 
 # Sidebar com informações
 with st.sidebar:
@@ -86,27 +102,94 @@ with st.sidebar:
     - `if x is over 10:` → `if x > 10:`
     - `repeat 5 times:` → `for _ in range(5):`
     - `for each item in list:` → `for item in list:`
-    
-    ### Exemplos Rápidos:
     """)
+    
+    # Sistema de i18n
+    if I18N_AVAILABLE:
+        st.markdown("---")
+        st.header("🌍 Internacionalização (i18n)")
+        st.markdown("""
+        **Escreva código Mython em múltiplas línguas!**
+        
+        O sistema traduz apenas as **palavras-chave**:
+        - 🇺🇸 **Inglês**: `say`, `ask`, `if`, `else`
+        - 🇧🇷 **Português**: `dizer`, `perguntar`, `se`, `senão`
+        - 🇪🇸 **Espanhol**: `decir`, `preguntar`, `si`, `sino`
+        
+        **✨ Acentuação Opcional:**
+        - Pode escrever com ou sem acentos
+        - `dizer` ou `dizer` → `say`
+        - `senão` ou `senao` → `else`
+        - O sistema detecta automaticamente
+        
+        Strings literais e variáveis **não** são traduzidas.
+        """)
+        
+        # Seletor de idioma
+        lang_flags = {
+            "en": "🇺🇸",
+            "pt": "🇧🇷",
+            "es": "🇪🇸",
+            "fr": "🇫🇷",
+            "de": "🇩🇪",
+            "it": "🇮🇹",
+        }
+        
+        lang_options = ["Automático (Detectar)"] + list(SUPPORTED_LANGUAGES.keys())
+        
+        def format_lang(option):
+            if option == "Automático (Detectar)":
+                return "🔍 Automático (Detectar)"
+            flag = lang_flags.get(option, "🌍")
+            name = SUPPORTED_LANGUAGES.get(option, option)
+            return f"{flag} {name}"
+        
+        selected_lang = st.selectbox(
+            "Idioma do código:",
+            options=lang_options,
+            format_func=format_lang,
+            key="selected_language"
+        )
+        
+        # Atualizar session_state
+        if selected_lang == "Automático (Detectar)":
+            st.session_state.code_language = None
+        else:
+            st.session_state.code_language = selected_lang
+    
+    st.markdown("---")
+    st.markdown("### 📖 Exemplos Rápidos:")
+    
+    example_options = [
+        "Selecione um exemplo...",
+        "Hello World",
+        "Verificar Idade",
+        "Lista de Nomes",
+        "Função Soma",
+        "Classe Person",
+        "Loop com Condição"
+    ]
+    
+    # Adicionar exemplos em outras línguas se i18n estiver disponível
+    if I18N_AVAILABLE:
+        example_options.extend([
+            "Hello World (PT)",
+            "Hello World (ES)",
+            "Verificar Idade (PT)"
+        ])
     
     example_code = st.selectbox(
         "Carregar exemplo:",
-        [
-            "Selecione um exemplo...",
-            "Hello World",
-            "Verificar Idade",
-            "Lista de Nomes",
-            "Função Soma",
-            "Classe Person",
-            "Loop com Condição"
-        ]
+        example_options,
+        key="example_selector"
     )
     
     st.markdown("---")
     st.markdown("### 📖 Documentação")
     st.markdown("[README](https://github.com/zandonadimarcelo4-ctrl/Mython)")
     st.markdown("[Padrões](OFFICIAL_PATTERN_DICTIONARY.md)")
+    if I18N_AVAILABLE:
+        st.markdown("[i18n](MYTHON_I18N.md)")
 
 # Exemplos de código
 examples = {
@@ -159,13 +242,37 @@ person.have_birthday()''',
 while count is under 5:
     say "Count: " + str(count)
     set count = count + 1
-say "Done!"'''
+say "Done!"''',
+    
+    # Exemplos em outras línguas
+    "Hello World (PT)": '''dizer "Olá, Mundo!"
+dizer "Bem-vindo ao Mython IDE!"''',
+    
+    "Hello World (ES)": '''decir "¡Hola, Mundo!"
+decir "¡Bienvenido al Mython IDE!"''',
+    
+    "Verificar Idade (PT)": '''perguntar número idade "Digite sua idade: "
+se idade é maior que 18:
+    dizer "Você é adulto"
+senão:
+    dizer "Você é menor"'''
 }
 
 # Carregar exemplo se selecionado (movido para depois da inicialização)
 
 # Editor de código Mython
-st.header("📝 Editor Mython")
+header_col1, header_col2 = st.columns([3, 1])
+with header_col1:
+    st.header("📝 Editor Mython")
+with header_col2:
+    # Mostrar idioma atual se disponível
+    if I18N_AVAILABLE:
+        current_lang = st.session_state.get("code_language", None)
+        if current_lang:
+            lang_name = SUPPORTED_LANGUAGES.get(current_lang, current_lang)
+            lang_flags_map = {"en": "🇺🇸", "pt": "🇧🇷", "es": "🇪🇸", "fr": "🇫🇷", "de": "🇩🇪", "it": "🇮🇹"}
+            flag = lang_flags_map.get(current_lang, "🌍")
+            st.info(f"{flag} {lang_name}")
 
 # Inicializar código se não existir
 if "mython_code" not in st.session_state:
@@ -174,6 +281,15 @@ if "mython_code" not in st.session_state:
 # Atualizar session_state se exemplo foi carregado
 if example_code and example_code != "Selecione um exemplo..." and example_code in examples:
     st.session_state.mython_code = examples[example_code]
+    # Se o exemplo é em outra língua, detectar e atualizar o idioma
+    if I18N_AVAILABLE:
+        if "(PT)" in example_code:
+            st.session_state.code_language = "pt"
+        elif "(ES)" in example_code:
+            st.session_state.code_language = "es"
+        else:
+            # Para exemplos em inglês, não definir idioma (usar detecção automática)
+            st.session_state.code_language = None
 
 mython_code = st.text_area(
     "Escreva seu código Mython aqui:",
@@ -207,9 +323,22 @@ if clear_btn:
 
 # Transpilar código
 python_code = None
+detected_lang = None
 if transpile_btn or run_btn:
     if mython_code.strip():
         try:
+            # Detectar idioma se necessário
+            lang_to_use = st.session_state.get("code_language", None)
+            
+            # Se não foi selecionado manualmente e i18n está disponível, detectar
+            if lang_to_use is None and I18N_AVAILABLE:
+                try:
+                    detected_lang = detect_language(mython_code)
+                    if detected_lang != "en":
+                        lang_to_use = detected_lang
+                except:
+                    detected_lang = "en"
+            
             # Criar arquivo temporário
             with tempfile.NamedTemporaryFile(mode='w', suffix='.logic', delete=False, encoding='utf-8') as f:
                 f.write(mython_code)
@@ -219,7 +348,8 @@ if transpile_btn or run_btn:
             with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, encoding='utf-8') as f:
                 temp_py = f.name
             
-            transpile_file(temp_logic, temp_py)
+            # Transpilar com idioma especificado
+            transpile_file(temp_logic, temp_py, lang=lang_to_use)
             
             # Ler código Python gerado
             with open(temp_py, 'r', encoding='utf-8') as f:
@@ -235,10 +365,22 @@ if transpile_btn or run_btn:
                 pass  # Ignorar erros ao limpar arquivos temporários
             
             st.session_state.python_code = python_code
+            st.session_state.detected_lang = detected_lang or lang_to_use
+            
+            # Mostrar informações sobre o idioma detectado/usado
+            success_msg = "✅ Transpilação concluída com sucesso!"
+            if I18N_AVAILABLE:
+                if lang_to_use and lang_to_use != "en":
+                    lang_name = SUPPORTED_LANGUAGES.get(lang_to_use, lang_to_use)
+                    success_msg += f" 🌍 (Código em {lang_name})"
+                elif detected_lang and detected_lang != "en":
+                    lang_name = SUPPORTED_LANGUAGES.get(detected_lang, detected_lang)
+                    success_msg += f" 🌍 (Idioma detectado: {lang_name})"
+            
             if LARK_AVAILABLE:
-                st.success("✅ Transpilação concluída com sucesso! (Lark - 99% Python)")
-            else:
-                st.success("✅ Transpilação concluída com sucesso!")
+                success_msg += " (Lark - 99% Python)"
+            
+            st.success(success_msg)
             
         except Exception as e:
             import traceback

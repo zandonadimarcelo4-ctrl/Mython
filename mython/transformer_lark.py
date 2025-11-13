@@ -9,10 +9,11 @@ from typing import List, Any
 class MythonTransformer(Transformer):
     """Transforma a árvore de parse do Mython em código Python."""
     
-    def __init__(self):
+    def __init__(self, source_code: str = None):
         super().__init__()
         self.indent_level = 0
         self.in_class = False
+        self.source_code = source_code  # Armazenar código original para extrair tokens
         self.needs_imports = {
             'time': False,
             'random': False,
@@ -30,7 +31,7 @@ class MythonTransformer(Transformer):
     # Statements
     # ============================================
     
-    def start(self, statements: List[str]) -> str:
+    def start(self, statements: List[Any]) -> str:
         """Início do programa."""
         lines = []
         
@@ -53,19 +54,90 @@ class MythonTransformer(Transformer):
             lines.extend(imports)
             lines.append("")
         
-        lines.extend(statements)
+        # Processar cada statement e adicionar às linhas
+        for stmt in statements:
+            if stmt:
+                # Se não é string, converter
+                if not isinstance(stmt, str):
+                    stmt = str(stmt)
+                # Adicionar as linhas do statement PRESERVANDO indentação
+                if stmt.strip():
+                    for line in stmt.split('\n'):
+                        # Não fazer strip - preservar indentação completamente
+                        if line.strip():  # Apenas verificar se não é linha vazia
+                            lines.append(line)
+        
         return "\n".join(lines) + "\n"
     
     def statement(self, args: List[Any]) -> str:
         """Um statement."""
-        return args[0] if args else ""
+        if not args:
+            return ""
+        result = args[0]
+        # Garantir que é string
+        if not isinstance(result, str):
+            result = str(result)
+        # Se parece ser uma string quebrada em caracteres (TODAS as linhas têm apenas 1 caractere), tentar corrigir
+        if '\n' in result:
+            lines = result.split('\n')
+            non_empty = [line.strip() for line in lines if line.strip()]
+            # Verificar se TODAS as linhas (sem strip) têm exatamente 1 caractere (sem espaços)
+            # Isso indica que é uma string realmente quebrada, não código com indentação
+            if non_empty and all(len(line) == 1 for line in non_empty):
+                # Pode ser uma string quebrada
+                joined = "".join(non_empty)
+                # Se parece ser código Python válido, usar
+                if any(keyword in joined for keyword in ['if', 'else', 'print', '=', '(', ')', ':', '"', "'"]):
+                    return joined
+        # Retornar resultado como está (preservar indentação e quebras de linha)
+        return result
     
-    def block(self, statements: List[str]) -> str:
+    def block(self, statements: List[Any]) -> str:
         """Bloco de código."""
         self.indent_level += 1
-        result = "\n".join(self.indent() + stmt for stmt in statements if stmt.strip())
+        result_lines = []
+        for stmt in statements:
+            if stmt:
+                # Se for Tree object, transformar recursivamente
+                if not isinstance(stmt, str):
+                    if hasattr(stmt, 'children'):
+                        stmt = self.transform(stmt)
+                    else:
+                        stmt = str(stmt)
+                
+                # Garantir que é string
+                if not isinstance(stmt, str):
+                    stmt = str(stmt)
+                
+                # Se stmt está vazio após strip, pular
+                if not stmt.strip():
+                    continue
+                
+                # Se stmt parece ser uma string quebrada em caracteres, tentar corrigir
+                if '\n' in stmt:
+                    stmt_lines = stmt.split('\n')
+                    # Verificar se TODAS as linhas não vazias têm exatamente 1 caractere APÓS strip
+                    # Isso indica que é uma string realmente quebrada, não código normal
+                    non_empty = [line.strip() for line in stmt_lines if line.strip()]
+                    if non_empty and all(len(line) == 1 for line in non_empty):
+                        # É uma string quebrada - juntar e adicionar indentação
+                        joined = "".join(non_empty)
+                        # Verificar se juntando forma código Python válido
+                        if any(keyword in joined for keyword in ['print', '=', '(', ')', '"', "'", 'if', 'else', 'def', 'class']):
+                            result_lines.append(self.indent() + joined)
+                            continue
+                
+                # Dividir em linhas e processar normalmente (preservar linhas completas)
+                lines = stmt.split('\n')
+                for line in lines:
+                    stripped = line.strip()
+                    if stripped:
+                        # Adicionar indentação apropriada
+                        result_lines.append(self.indent() + stripped)
+        
         self.indent_level -= 1
-        return result
+        result = "\n".join(result_lines)
+        return result if result_lines else ""
     
     # ============================================
     # Saída
@@ -74,7 +146,18 @@ class MythonTransformer(Transformer):
     def say_stmt(self, args: List[Any]) -> str:
         """say/print/show/display/tell"""
         expr = self._expr(args[0])
-        return self.indent() + f"print({expr})"
+        # Se expr parece ser uma string quebrada (múltiplas linhas de um caractere), tentar corrigir
+        if isinstance(expr, str):
+            # Verificar se é uma string quebrada em caracteres (sem indentação)
+            if '\n' in expr:
+                lines = expr.split('\n')
+                non_empty = [line.strip() for line in lines if line.strip()]
+                # Se TODAS as linhas (sem strip) têm exatamente 1 caractere, é uma string quebrada
+                if non_empty and all(len(line) == 1 for line in non_empty):
+                    # Juntar todas as linhas
+                    expr = "".join(non_empty)
+        # Não adicionar indentação aqui - o block fará isso
+        return f"print({expr})"
     
     # ============================================
     # Entrada
@@ -82,13 +165,13 @@ class MythonTransformer(Transformer):
     
     def ask_stmt(self, args: List[Any]) -> str:
         """ask/get/read/prompt"""
-        var_name = args[0].value if isinstance(args[0], Token) else str(args[0])
+        var_name = args[0].value if isinstance(args[0], Token) else self._expr(args[0])
         prompt = self._expr(args[1]) if len(args) > 1 and args[1] else '""'
         return self.indent() + f'{var_name} = input({prompt})'
     
     def ask_number_stmt(self, args: List[Any]) -> str:
         """ask number/get number/read number"""
-        var_name = args[0].value if isinstance(args[0], Token) else str(args[0])
+        var_name = args[0].value if isinstance(args[0], Token) else self._expr(args[0])
         prompt = self._expr(args[1]) if len(args) > 1 and args[1] else '""'
         return self.indent() + f'{var_name} = int(input({prompt}))'
     
@@ -97,75 +180,209 @@ class MythonTransformer(Transformer):
     # ============================================
     
     def if_stmt(self, args: List[Any]) -> str:
-        """if/when/whenever"""
-        condition = self._condition(args[0])
-        block = args[1] if len(args) > 1 else ""
-        return self.indent() + f"if {condition}:\n{block}"
+        """if/when/whenever - SIMPLIFICADO: normalização já foi feita antes do parsing"""
+        if not args or len(args) < 1:
+            return ""
+        
+        # A condição já foi normalizada antes do parsing, então processar a árvore condition
+        cond_tree = args[0]
+        # Se cond_tree tem children, processar usando condition() ou transformar diretamente
+        if hasattr(cond_tree, 'children') and cond_tree.children:
+            # Tentar transformar a árvore condition diretamente
+            try:
+                condition = self.transform(cond_tree)
+                if not isinstance(condition, str):
+                    # Se não retornou string, usar _expr para extrair
+                    condition = self._expr(cond_tree)
+            except:
+                condition = self._expr(cond_tree)
+        else:
+            condition = self._expr(cond_tree)
+        
+        block = self.block(args[1]) if len(args) > 1 and args[1] else ""
+        result = self.indent() + f"if {condition}:"
+        if block:
+            # Garantir que block é uma string e não está quebrada
+            if not isinstance(block, str):
+                block = str(block)
+            # Se block parece ser uma string quebrada em caracteres (TODAS linhas = 1 char), tentar corrigir
+            if '\n' in block:
+                block_lines = block.split('\n')
+                # Verificar se TODAS as linhas não vazias têm exatamente 1 caractere APÓS strip
+                non_empty = [line.strip() for line in block_lines if line.strip()]
+                if non_empty and all(len(line) == 1 for line in non_empty):
+                    # É uma string realmente quebrada - juntar e adicionar indentação
+                    joined = "".join(non_empty)
+                    if any(keyword in joined for keyword in ['print', '=', '(', ')', '"', "'", 'if', 'else']):
+                        block = self.indent() + joined
+                # Se não está quebrado, preservar o block como está (já tem indentação do método block)
+            # Adicionar block ao resultado (preservando indentação)
+            result += "\n" + block
+        return result
     
     def elif_stmt(self, args: List[Any]) -> str:
-        """elif/else if/or if"""
-        condition = self._condition(args[0])
-        block = args[1] if len(args) > 1 else ""
-        return self.indent() + f"elif {condition}:\n{block}"
+        """elif/else if/or if - SIMPLIFICADO: normalização já foi feita antes do parsing"""
+        if not args or len(args) < 1:
+            return ""
+        
+        # A condição já foi normalizada antes do parsing, então processar a árvore condition
+        cond_tree = args[0]
+        # Se cond_tree tem children, processar usando condition() ou transformar diretamente
+        if hasattr(cond_tree, 'children') and cond_tree.children:
+            # Tentar transformar a árvore condition diretamente
+            try:
+                condition = self.transform(cond_tree)
+                if not isinstance(condition, str):
+                    # Se não retornou string, usar _expr para extrair
+                    condition = self._expr(cond_tree)
+            except:
+                condition = self._expr(cond_tree)
+        else:
+            condition = self._expr(cond_tree)
+        
+        block = self.block(args[1]) if len(args) > 1 and args[1] else ""
+        result = self.indent() + f"elif {condition}:"
+        if block:
+            # Garantir que block é uma string e não está quebrada
+            if not isinstance(block, str):
+                block = str(block)
+            # Se block parece ser uma string quebrada em caracteres (TODAS linhas = 1 char), tentar corrigir
+            if '\n' in block:
+                block_lines = block.split('\n')
+                non_empty = [line.strip() for line in block_lines if line.strip()]
+                if non_empty and all(len(line) == 1 for line in non_empty):
+                    # É uma string realmente quebrada - juntar e adicionar indentação
+                    joined = "".join(non_empty)
+                    if any(keyword in joined for keyword in ['print', '=', '(', ')', '"', "'", 'if', 'else']):
+                        block = self.indent() + joined
+                # Se não está quebrado, preservar o block como está
+            # Adicionar block ao resultado (preservando indentação)
+            result += "\n" + block
+        return result
     
     def else_stmt(self, args: List[Any]) -> str:
-        """else/otherwise"""
-        block = args[0] if args else ""
-        return self.indent() + f"else:\n{block}"
+        """else/otherwise - SIMPLIFICADO: normalização já foi feita antes do parsing"""
+        block = self.block(args[0]) if len(args) > 0 and args[0] else ""
+        result = self.indent() + "else:"
+        if block:
+            # Garantir que block é uma string e não está quebrada
+            if not isinstance(block, str):
+                block = str(block)
+            # Se block parece ser uma string quebrada em caracteres (TODAS linhas = 1 char), tentar corrigir
+            if '\n' in block:
+                block_lines = block.split('\n')
+                non_empty = [line.strip() for line in block_lines if line.strip()]
+                if non_empty and all(len(line) == 1 for line in non_empty):
+                    # É uma string realmente quebrada - juntar e adicionar indentação
+                    joined = "".join(non_empty)
+                    if any(keyword in joined for keyword in ['print', '=', '(', ')', '"', "'", 'if', 'else']):
+                        block = self.indent() + joined
+                # Se não está quebrado, preservar o block como está
+            # Adicionar block ao resultado (preservando indentação)
+            result += "\n" + block
+        return result
     
     def _condition(self, cond: Any) -> str:
         """Normaliza condição."""
-        if isinstance(cond, str):
-            # Já processado
-            return cond
+        # Primeiro converter Tree/Token para string usando _expr
+        cond_str = self._expr(cond)
         
-        # Normalizar expressões naturais
-        cond_str = str(cond)
+        # Normalizar expressões naturais para operadores Python (ordem importa!)
+        # Fazer as mais longas primeiro para evitar substituições parciais
         replacements = [
             (" is greater than or equal to ", " >= "),
             (" greater than or equal to ", " >= "),
-            (" is at least ", " >= "),
             (" is less than or equal to ", " <= "),
             (" less than or equal to ", " <= "),
-            (" is at most ", " <= "),
             (" is greater than ", " > "),
             (" greater than ", " > "),
+            (" is less than ", " < "),
+            (" less than ", " < "),
+            (" is not equal to ", " != "),
+            (" not equal to ", " != "),
+            (" is at least ", " >= "),
+            (" is at most ", " <= "),
             (" is over ", " > "),
             (" is above ", " > "),
             (" above ", " > "),
-            (" is less than ", " < "),
-            (" less than ", " < "),
             (" is under ", " < "),
             (" is below ", " < "),
             (" below ", " < "),
-            (" is not equal to ", " != "),
-            (" not equal to ", " != "),
-            (" is not ", " != "),
             (" equals ", " == "),
             (" equal to ", " == "),
-            (" is ", " == "),
-            (" is in ", " in "),
-            (" is not in ", " not in "),
         ]
         
         for old, new in replacements:
-            cond_str = cond_str.replace(old, new)
+            if old in cond_str:
+                cond_str = cond_str.replace(old, new)
+        
+        # Substituir "is not in" primeiro (antes de "is not")
+        import re
+        cond_str = re.sub(r'\bis not in\b', ' not in ', cond_str)
+        cond_str = re.sub(r'\bis not\b', ' != ', cond_str)
+        
+        # Substituir "is in" por "in" (mas não "is not in" que já foi processado)
+        cond_str = re.sub(r'\bis in\b', ' in ', cond_str)
+        
+        # Se ainda contém "is" simples (que não foi processado), substituir por ==
+        # Mas só se não for parte de palavras já processadas
+        cond_str = re.sub(r'\bis\b(?!\s+(?:not|in|over|under|above|below|greater|less|at|equal))', ' == ', cond_str)
+        
+        # Limpar espaços múltiplos
+        cond_str = re.sub(r'\s+', ' ', cond_str).strip()
         
         return cond_str
     
-    def condition(self, args: List[Any]) -> str:
-        """Condição."""
-        if len(args) == 3:
-            # expression comparison expression
-            left = self._expr(args[0])
-            op = self._expr(args[1])
-            right = self._expr(args[2])
-            return f"{left} {op} {right}"
-        elif len(args) == 2:
-            # expression operator expression (já normalizado)
-            return f"{self._expr(args[0])} {self._expr(args[1])}"
-        else:
+    def comparison(self, args: List[Any]) -> str:
+        """Operador de comparação: >, <, >=, <=, ==, !="""
+        # comparison pode ser um Token diretamente ou uma Tree
+        if args:
             return self._expr(args[0])
+        # Se não tem args, pode ser um Token diretamente
+        return ""
+    
+    def condition(self, args: List[Any]) -> str:
+        """Condição - SIMPLIFICADO: normalização já foi feita antes do parsing."""
+        if not args:
+            return ""
+        
+        # A condição já foi normalizada antes do parsing
+        # A estrutura é: expression comparison expression
+        # Se comparison está vazio, buscar diretamente no código normalizado
+        
+        # Extrair as expressões
+        left_expr = self._expr(args[0]) if len(args) > 0 else ""
+        right_expr = self._expr(args[2]) if len(args) > 2 else ""
+        
+        # Tentar extrair o operador do código normalizado
+        if self.source_code and left_expr and right_expr:
+            import re
+            # Buscar padrão: left_expr OPERADOR right_expr
+            # Operadores possíveis: >, <, >=, <=, ==, !=
+            pattern = rf'\b{re.escape(left_expr)}\s*([><=!]+)\s*{re.escape(right_expr)}\b'
+            match = re.search(pattern, self.source_code)
+            if match:
+                operator = match.group(1)
+                return f"{left_expr} {operator} {right_expr}"
+        
+        # Fallback: processar normalmente (pode não funcionar se comparison estiver vazio)
+        parts = []
+        for arg in args:
+            part = self._expr(arg)
+            if part:
+                parts.append(part)
+        
+        # Se temos 2 partes mas falta o operador, tentar inferir
+        if len(parts) == 2 and self.source_code:
+            left, right = parts[0], parts[1]
+            import re
+            pattern = rf'\b{re.escape(left)}\s*([><=!]+)\s*{re.escape(right)}\b'
+            match = re.search(pattern, self.source_code)
+            if match:
+                return f"{left} {match.group(1)} {right}"
+        
+        # Juntar as partes
+        return " ".join(parts) if parts else ""
     
     # ============================================
     # Loops
@@ -647,7 +864,16 @@ class MythonTransformer(Transformer):
     def expression(self, args: List[Any]) -> str:
         """Expressão."""
         if len(args) == 1:
-            return self._expr(args[0])
+            result = self._expr(args[0])
+            # Se result parece ser uma string quebrada, tentar corrigir
+            if isinstance(result, str) and '\n' in result:
+                lines = result.split('\n')
+                if len(lines) > 1 and all(len(line.strip()) == 1 for line in lines if line.strip()):
+                    # Pode ser uma string quebrada - verificar se é uma string Python
+                    joined = "".join(line.strip() for line in lines if line.strip())
+                    if (joined.startswith('"') and joined.endswith('"')) or (joined.startswith("'") and joined.endswith("'")):
+                        return joined
+            return result
         # Processar operadores
         result = self._expr(args[0])
         for i in range(1, len(args), 2):
@@ -672,7 +898,11 @@ class MythonTransformer(Transformer):
     def factor(self, args: List[Any]) -> str:
         """Fator (multiplicação/divisão)."""
         if len(args) == 1:
-            return self._expr(args[0])
+            arg = args[0]
+            # Se é um Token STRING, retornar diretamente
+            if isinstance(arg, Token) and arg.type == 'STRING':
+                return arg.value
+            return self._expr(arg)
         result = self._expr(args[0])
         for i in range(1, len(args), 2):
             if i + 1 < len(args):
@@ -732,14 +962,85 @@ class MythonTransformer(Transformer):
     def _expr(self, expr: Any) -> str:
         """Converte expressão para string."""
         if isinstance(expr, Token):
+            # Se é um Token STRING, retornar diretamente (não processar como string Python)
+            if expr.type == 'STRING':
+                return expr.value
             return expr.value
         elif isinstance(expr, str):
             return expr
         elif hasattr(expr, 'children'):
-            # É um nó da árvore
-            return str(expr)
+            # É um nó da árvore - transformar recursivamente
+            try:
+                # Tentar transformar recursivamente
+                transformed = self.transform(expr)
+                if isinstance(transformed, str):
+                    # Se a string transformada parece quebrada, tentar corrigir
+                    if '\n' in transformed:
+                        lines = transformed.split('\n')
+                        # Se todas as linhas têm apenas um caractere, pode ser uma string quebrada
+                        if all(len(line.strip()) == 1 for line in lines if line.strip()):
+                            # Verificar se juntando forma uma string Python válida
+                            joined = "".join(line.strip() for line in lines if line.strip())
+                            if (joined.startswith('"') and joined.endswith('"')) or (joined.startswith("'") and joined.endswith("'")):
+                                return joined
+                    return transformed
+                else:
+                    # Se não retornou string, tentar transformar children
+                    if hasattr(expr, 'children') and expr.children:
+                        parts = []
+                        for child in expr.children:
+                            part = self._expr(child)
+                            if part:
+                                parts.append(part)
+                        
+                        # Se temos apenas uma parte e é uma string completa, retornar diretamente
+                        if len(parts) == 1 and isinstance(parts[0], str):
+                            return parts[0]
+                        
+                        # Se todos os parts são strings de um caractere, pode ser uma string quebrada
+                        if parts and all(isinstance(p, str) and len(p) == 1 for p in parts):
+                            # Pode ser uma string quebrada - tentar juntar
+                            joined = "".join(parts)
+                            # Se parece com uma string Python (começa e termina com aspas), retornar
+                            if (joined.startswith('"') and joined.endswith('"')) or (joined.startswith("'") and joined.endswith("'")):
+                                return joined
+                        
+                        # Se temos apenas uma string completa entre aspas, retornar diretamente
+                        if len(parts) == 1 and isinstance(parts[0], str) and ((parts[0].startswith('"') and parts[0].endswith('"')) or (parts[0].startswith("'") and parts[0].endswith("'"))):
+                            return parts[0]
+                        
+                        # Juntar as partes normalmente (mas não se for uma string quebrada)
+                        joined = "".join(parts) if parts else str(expr)
+                        # Se o resultado final parece ser uma string Python quebrada, tentar corrigir
+                        if isinstance(joined, str) and '\n' in joined:
+                            lines = joined.split('\n')
+                            if all(len(line.strip()) == 1 for line in lines if line.strip()):
+                                fixed = "".join(line.strip() for line in lines if line.strip())
+                                if (fixed.startswith('"') and fixed.endswith('"')) or (fixed.startswith("'") and fixed.endswith("'")):
+                                    return fixed
+                        return joined
+                    return str(expr)
+            except Exception as e:
+                # Se falhar, tentar transformar children diretamente
+                if hasattr(expr, 'children') and expr.children:
+                    parts = []
+                    for child in expr.children:
+                        part = self._expr(child)
+                        if part:
+                            parts.append(part)
+                    
+                    if len(parts) == 1 and isinstance(parts[0], str):
+                        return parts[0]
+                    
+                    if parts and all(isinstance(p, str) and len(p) == 1 for p in parts):
+                        joined = "".join(parts)
+                        if (joined.startswith('"') and joined.endswith('"')) or (joined.startswith("'") and joined.endswith("'")):
+                            return joined
+                    return "".join(parts) if parts else str(expr)
+                return str(expr)
         else:
             return str(expr)
+    
     
     def _params(self, params: Any) -> str:
         """Converte parâmetros para string."""

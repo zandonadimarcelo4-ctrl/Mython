@@ -74,7 +74,7 @@ ask_number_stmt: ("ask" "number" | "ask" "for" "number" | "get" "number" | "read
 // Condições
 if_stmt: ("if" | "when" | "whenever") condition ":" block
 elif_stmt: ("elif" | "else" "if" | "or" "if") condition ":" block
-else_stmt: ("else" | "otherwise") ":"
+else_stmt: ("else" | "otherwise") ":" block
 
 // Loops
 repeat_stmt: ("repeat" | "do" | "loop") NUMBER ("times" | "time") ":" block
@@ -203,7 +203,13 @@ condition: expression comparison expression
          | expression ("is" "at" "most" | "is" "less" "than" "or" "equal" "to") expression
          | expression ("is" "in" | "is" "not" "in") expression
 
-comparison: ">" | "<" | ">=" | "<=" | "==" | "!="
+comparison: ">" | "<" | ">=" | "<=" | "==" | "!=" | GT | LT | GTE | LTE | EQ | NEQ
+GT: ">"
+LT: "<"
+GTE: ">="
+LTE: "<="
+EQ: "=="
+NEQ: "!="
 
 expression: term (("+" | "-") term)*
 term: factor (("*" | "/" | "//" | "%" | "**") factor)*
