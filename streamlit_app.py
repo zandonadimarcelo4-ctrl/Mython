@@ -9,7 +9,13 @@ import tempfile
 import os
 import sys
 from pathlib import Path
-from mython.transpiler import transpile_file
+# Tentar usar Lark primeiro, fallback para versão antiga
+try:
+    from mython.transpiler_lark import transpile_file
+    LARK_AVAILABLE = True
+except ImportError:
+    from mython.transpiler import transpile_file
+    LARK_AVAILABLE = False
 
 # Configuração da página
 st.set_page_config(
@@ -53,11 +59,26 @@ st.markdown("""
 st.title("🐍 Mython IDE")
 st.markdown("**Escreva código Mython, veja o Python gerado e execute!**")
 
+# Mostrar status do Lark
+if LARK_AVAILABLE:
+    st.success("✅ Usando transpiler Lark (99% de cobertura Python)")
+else:
+    st.info("ℹ️ Usando transpiler padrão (Lark não disponível)")
+
 # Sidebar com informações
 with st.sidebar:
     st.header("📚 Sobre o Mython")
     st.markdown("""
     **Mython** é uma linguagem super simplificada baseada em inglês A2/B1 que transpila para Python.
+    
+    ### 🚀 Recursos (99% Python):
+    - ✅ Controle de fluxo: `if/else/elif`, `while`, `for each`, `repeat`
+    - ✅ Estruturas: listas, dicionários, tuplas, sets, comprehensions
+    - ✅ Funções: `define`, `return`, `yield`, `lambda`, `*args`, `**kwargs`
+    - ✅ Classes: herança, métodos, decorators, magic methods
+    - ✅ Async: `async task`, `await`
+    - ✅ Exceções: `attempt`, `catch`, `finally`, `raise`
+    - ✅ Macros: matemáticas, strings, listas, arquivos, data/hora
     
     ### Comandos Básicos:
     - `say "texto"` → `print("texto")`
@@ -141,10 +162,7 @@ while count is under 5:
 say "Done!"'''
 }
 
-# Carregar exemplo se selecionado
-if example_code and example_code != "Selecione um exemplo...":
-    if example_code in examples:
-        st.session_state.mython_code = examples[example_code]
+# Carregar exemplo se selecionado (movido para depois da inicialização)
 
 # Editor de código Mython
 st.header("📝 Editor Mython")
@@ -153,12 +171,19 @@ st.header("📝 Editor Mython")
 if "mython_code" not in st.session_state:
     st.session_state.mython_code = examples["Hello World"]
 
+# Atualizar session_state se exemplo foi carregado
+if example_code and example_code != "Selecione um exemplo..." and example_code in examples:
+    st.session_state.mython_code = examples[example_code]
+
 mython_code = st.text_area(
     "Escreva seu código Mython aqui:",
-    value=st.session_state.mython_code,
+    value=st.session_state.get("mython_code", examples["Hello World"]),
     height=300,
     key="editor"
 )
+
+# Atualizar session_state com o código do editor
+st.session_state.mython_code = mython_code
 
 # Botões de ação
 col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
@@ -201,14 +226,26 @@ if transpile_btn or run_btn:
                 python_code = f.read()
             
             # Limpar arquivos temporários
-            os.unlink(temp_logic)
-            os.unlink(temp_py)
+            try:
+                if os.path.exists(temp_logic):
+                    os.unlink(temp_logic)
+                if os.path.exists(temp_py):
+                    os.unlink(temp_py)
+            except:
+                pass  # Ignorar erros ao limpar arquivos temporários
             
             st.session_state.python_code = python_code
-            st.success("✅ Transpilação concluída com sucesso!")
+            if LARK_AVAILABLE:
+                st.success("✅ Transpilação concluída com sucesso! (Lark - 99% Python)")
+            else:
+                st.success("✅ Transpilação concluída com sucesso!")
             
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
             st.error(f"❌ Erro na transpilação: {str(e)}")
+            with st.expander("🔍 Detalhes do erro"):
+                st.code(error_details, language="python")
             python_code = None
     else:
         st.warning("⚠️ Por favor, escreva algum código Mython primeiro.")

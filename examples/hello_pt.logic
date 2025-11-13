@@ -1,0 +1,8 @@
+# Exemplo em Português
+dizer "Olá, Mundo!"
+perguntar nome "Qual é seu nome? "
+se nome é "João":
+    dizer "Olá João!"
+senão:
+    dizer "Olá " + nome
+

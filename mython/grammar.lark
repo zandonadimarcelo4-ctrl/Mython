@@ -1,0 +1,262 @@
+// Gramática EBNF para Mython
+// Baseada em inglês A2/B1 - Linguagem Natural
+// Cobre 99% do Python com linguagem natural
+
+start: statement+
+
+statement: say_stmt
+         | ask_stmt
+         | ask_number_stmt
+         | if_stmt
+         | elif_stmt
+         | else_stmt
+         | repeat_stmt
+         | for_each_stmt
+         | while_stmt
+         | break_stmt
+         | continue_stmt
+         | pass_stmt
+         | list_stmt
+         | dict_stmt
+         | tuple_stmt
+         | set_stmt
+         | add_to_list_stmt
+         | remove_from_list_stmt
+         | function_def
+         | async_function_def
+         | generator_function_def
+         | return_stmt
+         | class_def
+         | init_stmt
+         | task_stmt
+         | assignment_stmt
+         | augmented_assignment_stmt
+         | wait_stmt
+         | random_stmt
+         | open_file_stmt
+         | save_file_stmt
+         | read_file_stmt
+         | use_stmt
+         | from_import_stmt
+         | attempt_stmt
+         | catch_stmt
+         | finally_stmt
+         | raise_stmt
+         | assert_stmt
+         | lambda_stmt
+         | yield_stmt
+         | await_stmt
+         | match_stmt
+         | case_stmt
+         | decorator_stmt
+         | decorator_with_args_stmt
+         | staticmethod_stmt
+         | classmethod_stmt
+         | property_stmt
+         | abstractmethod_stmt
+         | dataclass_stmt
+         | magic_method_stmt
+         | macro_stmt
+         | slice_stmt
+         | walrus_stmt
+         | type_hint_stmt
+         | python_escape
+         | comment
+         | empty_line
+
+// Saída
+say_stmt: ("say" | "print" | "show" | "display" | "tell") expression
+
+// Entrada
+ask_stmt: ("ask" | "ask" "for" | "get" | "read" | "prompt") VAR prompt?
+ask_number_stmt: ("ask" "number" | "ask" "for" "number" | "get" "number" | "read" "number") VAR prompt?
+
+// Condições
+if_stmt: ("if" | "when" | "whenever") condition ":" block
+elif_stmt: ("elif" | "else" "if" | "or" "if") condition ":" block
+else_stmt: ("else" | "otherwise") ":"
+
+// Loops
+repeat_stmt: ("repeat" | "do" | "loop") NUMBER ("times" | "time") ":" block
+for_each_stmt: ("for" "each" | "for" "every" | "loop" "through" | "iterate" "over" | "for") VAR "in" expression (":" | "as" VAR ":") block?
+while_stmt: ("while" | "as" "long" "as" | "keep" "doing" "while" | "continue" "while") condition ":"
+
+// Controle de fluxo
+break_stmt: ("break" | "stop" | "exit" "loop" | "leave" "loop" | "quit" "loop")
+continue_stmt: ("continue" | "skip" | "next" | "go" "to" "next" | "proceed")
+pass_stmt: ("pass" | "do" "nothing" | "skip" "this" | "ignore")
+
+// Estruturas de dados
+list_stmt: ("list" | "create" "list" | "make" "list") VAR "=" list_literal
+dict_stmt: ("dict" | "dictionary" | "create" "dict" | "make" "dict") VAR "=" dict_literal
+tuple_stmt: ("tuple" | "create" "tuple" | "make" "tuple") VAR "=" tuple_literal
+set_stmt: ("set" | "create" "set" | "make" "set") VAR "=" set_literal
+
+// Operações de lista
+add_to_list_stmt: ("add" | "append" | "put" | "insert") expression ("to" | "into") VAR
+remove_from_list_stmt: ("remove" | "delete" | "take" "out") expression "from" VAR
+
+// Funções
+function_def: ("define" | "function" | "to" | "create" "function") VAR "(" params? ")" ":"
+async_function_def: "async" ("define" | "function" | "task") VAR "(" params? ")" ":"
+generator_function_def: ("define" | "function") VAR "(" params? ")" ":" ("yield" | "produce" | "generate") expression
+return_stmt: ("return" | "give" "back" | "send" "back") expression?
+
+// Classes
+class_def: ("class" | "create" "class" | "make" "class" | "define" "class") VAR ("(" inheritance ")")? ":"
+init_stmt: ("init" | "constructor" | "initialize" | "create" | "setup") "(" params? ")" ":"
+task_stmt: ("task" | "method" | "function" | "do" | "perform" | "execute") VAR "(" params? ")" ":"
+
+// Atribuições
+assignment_stmt: ("set" | "assign" | "let" | "make" | "put" | "store" | "save" | "create" | "initialize") VAR "=" expression
+augmented_assignment_stmt: VAR ("+=" | "-=" | "*=" | "/=" | "//=" | "%=" | "**=") expression
+
+// Utilitários
+wait_stmt: ("wait" | "pause" | "sleep" | "delay") NUMBER ("seconds" | "second")
+random_stmt: ("random" "number" "from" | "random" "between" | "pick" "random" "number" "from" | "get" "random" "number" "from" | "choose" "random" "number" "from" | "select" "random" "number" "from") expression ("to" | "and") expression
+
+// Arquivos
+open_file_stmt: ("open" | "open" "file" | "read" "file" | "load" "file") STRING "as" VAR ":"
+save_file_stmt: ("save" "text" | "write" | "save" | "store") expression ("to" "file" | "into" "file" | "in" "file") STRING
+read_file_stmt: ("read" "file" | "load" "file" | "get" "from" "file") STRING "as" VAR
+
+// Imports
+use_stmt: ("use" | "import" | "load" | "require" | "include") VAR ("as" VAR)?
+from_import_stmt: "from" VAR ("import" | "load" | "require") VAR ("as" VAR)?
+
+// Exceções
+attempt_stmt: ("attempt" | "try" | "attempt" "to") ":"
+catch_stmt: ("catch" | "except" | "handle" | "on" "error") (VAR ("as" VAR)?)? ":"
+finally_stmt: ("finally" | "always" | "in" "the" "end") ":"
+raise_stmt: ("raise" | "throw" | "raise" "error" | "throw" "error") expression
+assert_stmt: ("assert" | "check" | "verify" | "ensure") expression ("," expression)?
+
+// Avançado
+lambda_stmt: VAR "=>" expression
+           | VAR "->" expression
+yield_stmt: ("yield" | "produce" | "generate" | "return" "and" "continue") expression
+await_stmt: "await" expression
+match_stmt: "match" expression ":"
+case_stmt: "case" pattern ":"
+
+// Slicing simplificado
+slice_stmt: "slice" VAR "from" expression "to" expression
+
+// Walrus operator
+walrus_stmt: VAR ":=" expression
+
+// Type hints
+type_hint_stmt: VAR ":" type_annotation ("=" expression)?
+type_annotation: VAR | "int" | "str" | "float" | "bool" | "list" | "dict" | "tuple" | "set" | "None"
+
+// *args e **kwargs
+args_varargs: "*" VAR
+kwargs_varargs: "**" VAR
+
+// Decorators
+decorator_stmt: "decorator" VAR ":"
+decorator_with_args_stmt: "decorator" VAR "(" args? ")" ":"
+staticmethod_stmt: ("staticmethod" | "@staticmethod") ":"
+classmethod_stmt: ("classmethod" | "@classmethod") ":"
+property_stmt: ("property" | "@property") ":"
+abstractmethod_stmt: ("abstractmethod" | "@abstractmethod") ":"
+dataclass_stmt: ("dataclass" | "@dataclass") ":"
+magic_method_stmt: "magic" VAR "(" params? ")" ":"
+
+// Macros
+macro_stmt: math_macro
+          | string_macro
+          | list_macro
+          | file_macro
+          | date_macro
+          | system_macro
+
+math_macro: ("add" | "sum" | "plus") expression "and" expression
+          | ("subtract" | "minus") expression "from" expression
+          | ("multiply" | "times") expression "by" expression
+          | "divide" expression "by" expression
+
+string_macro: ("join" | "combine") VAR "with" expression
+            | ("split" | "separate") VAR "by" expression
+            | ("uppercase" | "to" "uppercase") VAR
+            | ("lowercase" | "to" "lowercase") VAR
+
+list_macro: ("length" "of" | "size" "of" | "count" "items" "in") VAR
+          | ("first" "item" "in" | "last" "item" "in") VAR
+          | ("reverse" | "flip") VAR
+          | ("sort" | "order") VAR
+
+file_macro: ("exists" "file" | "file" "exists") STRING
+          | ("delete" "file" | "remove" "file") STRING
+
+date_macro: ("current" "time" | "now" | "current" "date" | "today")
+
+system_macro: ("exit" "program" | "quit" "program" | "stop" "program")
+
+// Expressões
+condition: expression comparison expression
+         | expression ("is" | "equals" | "equal" "to") expression
+         | expression ("is" "not" | "not" "equal" "to") expression
+         | expression ("is" "over" | "is" "greater" "than" | "is" "above" | "greater" "than") expression
+         | expression ("is" "under" | "is" "less" "than" | "is" "below" | "less" "than") expression
+         | expression ("is" "at" "least" | "is" "greater" "than" "or" "equal" "to") expression
+         | expression ("is" "at" "most" | "is" "less" "than" "or" "equal" "to") expression
+         | expression ("is" "in" | "is" "not" "in") expression
+
+comparison: ">" | "<" | ">=" | "<=" | "==" | "!="
+
+expression: term (("+" | "-") term)*
+term: factor (("*" | "/" | "//" | "%" | "**") factor)*
+factor: NUMBER | STRING | VAR | "(" expression ")" | function_call | list_comprehension | dict_comprehension | set_comprehension
+
+function_call: VAR "(" args? ")"
+args: expression ("," expression)*
+     | args_varargs ("," expression)*
+     | expression ("," args_varargs)?
+     | args_varargs ("," kwargs_varargs)?
+     | kwargs_varargs
+
+list_comprehension: "list" "[" expression "for" VAR "in" expression ("if" condition)? "]"
+dict_comprehension: "dict" "{" expression ":" expression "for" VAR "in" expression ("if" condition)? "}"
+set_comprehension: "set" "{" expression "for" VAR "in" expression ("if" condition)? "}"
+
+list_literal: "[" (expression ("," expression)*)? "]"
+dict_literal: "{" (expression ":" expression ("," expression ":" expression)*)? "}"
+tuple_literal: "(" (expression ("," expression)*)? ")"
+set_literal: "{" (expression ("," expression)*)? "}"
+
+params: VAR ("," VAR)*
+      | VAR "=" expression ("," VAR "=" expression)*
+      | args_varargs ("," VAR)*
+      | VAR ("," args_varargs)?
+      | args_varargs ("," kwargs_varargs)?
+      | kwargs_varargs
+
+inheritance: VAR ("," VAR)*
+prompt: STRING | expression
+pattern: expression | "_" | tuple_pattern | list_pattern
+block: statement+
+
+// Acesso a atributos e subscrição
+attribute_access: VAR "." VAR
+subscription: VAR "[" expression "]"
+slice_expr: VAR "[" expression? ":" expression? (":" expression?)? "]"
+tuple_pattern: "(" pattern ("," pattern)* ")"
+list_pattern: "[" pattern ("," pattern)* "]"
+
+// Python puro (escape) - QUALQUER código Python funciona 100%!
+// Usar .+ em vez de .* para compatibilidade com Earley (não permite zero-width)
+python_escape: /.+/
+
+// Comentários e linhas vazias
+comment: /#.*/
+empty_line: WS
+
+// Terminais
+VAR: /[a-zA-Z_][a-zA-Z0-9_]*/
+NUMBER: /\d+(\.\d+)?/
+STRING: /"[^"]*"|'[^']*'|f"[^"]*"|f'[^']*'|r"[^"]*"|r'[^']*'|b"[^"]*"|b'[^']*'/
+
+%import common.WS
+%ignore WS
+

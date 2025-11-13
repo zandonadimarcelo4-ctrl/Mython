@@ -1,0 +1,325 @@
+# Exemplo: MÁXIMO de Linguagem Natural
+# Demonstra TODAS as formas possíveis de expressar em Mython
+
+# ============================================
+# ATRIBUIÇÃO - Múltiplas formas
+# ============================================
+set x = 10
+assign y = 20
+let z = 30
+make a = 40
+put b = 50
+store c = 60
+save d = 70
+create e = 80
+initialize f = 90
+
+# ============================================
+# SAÍDA - Todas as formas
+# ============================================
+say "Hello!"
+print "World!"
+show "This"
+display "Works"
+tell "Too!"
+
+# ============================================
+# ENTRADA - Todas as formas
+# ============================================
+ask name "Name? "
+ask for age "Age? "
+get email "Email? "
+read phone "Phone? "
+prompt city "City? "
+
+ask number count "Count? "
+ask for number price "Price? "
+get number quantity "Quantity? "
+read number total "Total? "
+
+# ============================================
+# ESTRUTURAS DE DADOS - Todas as formas
+# ============================================
+list items = [1, 2, 3]
+create list names = ["A", "B"]
+make list numbers = [10, 20]
+
+dict data = {"key": "value"}
+dictionary info = {"a": 1}
+create dict map = {"x": 10}
+make dict config = {"y": 20}
+
+tuple point = (1, 2)
+create tuple coord = (3, 4)
+make tuple pos = (5, 6)
+
+set unique = {1, 2, 3}
+create set values = {4, 5, 6}
+make set items = {7, 8, 9}
+
+# ============================================
+# OPERAÇÕES COM LISTAS - Todas as formas
+# ============================================
+add "new" to items
+append "item" to items
+put "value" into items
+insert "data" into items
+
+remove "old" from items
+delete "item" from items
+take out "value" from items
+
+# ============================================
+# LOOPS - Todas as formas
+# ============================================
+repeat 5 times:
+    say "Repeat"
+
+do 3 times:
+    say "Do"
+
+loop 2 times:
+    say "Loop"
+
+for each item in items:
+    say item
+
+for every name in names:
+    say name
+
+loop through items as item:
+    say item
+
+iterate over names as name:
+    say name
+
+for x in range(10):
+    say x
+
+while count is greater than 0:
+    say count
+    set count = count - 1
+
+as long as count is over 0:
+    say count
+
+keep doing while count is greater than 0:
+    say count
+
+continue while count is over 0:
+    say count
+
+# ============================================
+# CONTROLE DE FLUXO - Todas as formas
+# ============================================
+break
+stop
+exit loop
+leave loop
+quit loop
+
+continue
+skip
+next
+go to next
+proceed
+
+pass
+do nothing
+skip this
+ignore
+
+# ============================================
+# FUNÇÕES - Todas as formas
+# ============================================
+define add(a, b):
+    return a + b
+
+function multiply(x, y):
+    return x * y
+
+to divide(a, b):
+    return a / b
+
+create function subtract(x, y):
+    return x - y
+
+# Retorno
+return 10
+give back 20
+send back 30
+
+# ============================================
+# CLASSES - Todas as formas
+# ============================================
+class Person:
+    init(name):
+        set self.name = name
+    
+    constructor(age):
+        set self.age = age
+    
+    initialize(email):
+        set self.email = email
+    
+    create(phone):
+        set self.phone = phone
+    
+    setup(city):
+        set self.city = city
+    
+    task greet():
+        say "Hello, " + self.name
+    
+    method say_hello():
+        say "Hi!"
+    
+    function calculate(x):
+        return x * 2
+    
+    do something():
+        say "Done"
+    
+    perform action():
+        say "Action"
+    
+    execute command():
+        say "Command"
+
+create class Animal:
+    init(species):
+        set self.species = species
+
+make class Vehicle:
+    init(type):
+        set self.type = type
+
+define class Building:
+    init(floors):
+        set self.floors = floors
+
+# ============================================
+# EXCEÇÕES - Todas as formas
+# ============================================
+attempt:
+    risky()
+catch error:
+    say "Error"
+
+try:
+    something()
+handle ValueError as e:
+    say "Value error"
+
+attempt to:
+    do_something()
+on error:
+    say "Failed"
+
+finally:
+    say "Always"
+
+always:
+    say "Runs"
+
+in the end:
+    say "Finally"
+
+raise Exception("Error")
+throw ValueError("Bad value")
+raise error RuntimeError("Runtime")
+throw error KeyError("Missing key")
+
+assert x is greater than 0, "Must be positive"
+check y is not 0, "Cannot be zero"
+verify z is at least 1, "Must be at least 1"
+ensure a is under 100, "Must be under 100"
+
+# ============================================
+# ARQUIVOS - Todas as formas
+# ============================================
+open "file.txt" as f:
+    say f.read()
+
+open file "data.txt" as data:
+    say data.read()
+
+read file "input.txt" as content:
+    say content
+
+load file "config.txt" as config:
+    say config
+
+save text "Hello" to file "output.txt"
+write "World" to file "output.txt"
+save "Data" to file "output.txt"
+store "Info" in file "output.txt"
+
+read file "input.txt" as text
+load file "input.txt" as content
+get from file "input.txt" as data
+
+# ============================================
+# IMPORTS - Todas as formas
+# ============================================
+use math
+import json
+load os
+require sys
+include random
+
+use json as j
+import math as m
+load os as o
+
+from math import sqrt
+from json load dumps
+from os require path
+
+# ============================================
+# RANDOM - Todas as formas
+# ============================================
+set num = random number from 1 to 10
+set num2 = random between 5 and 15
+set num3 = pick random number from 1 to 100
+set num4 = get random number from 10 to 20
+set num5 = choose random number from 1 to 50
+set num6 = select random number from 0 to 9
+
+# ============================================
+# ESPERA - Todas as formas
+# ============================================
+wait 2 seconds
+pause 1 second
+sleep 3 seconds
+delay 0.5 seconds
+
+# ============================================
+# GENERATORS - Todas as formas
+# ============================================
+define generator():
+    yield 1
+    produce 2
+    generate 3
+    return and continue 4
+
+# ============================================
+# LAMBDA - Todas as formas
+# ============================================
+set double = x => x * 2
+set triple = x -> x * 3
+
+# ============================================
+# MATCH/CASE - Python 3.10+
+# ============================================
+match value:
+    case 1:
+        say "One"
+    case 2:
+        say "Two"
+    case _:
+        say "Other"
+
+say ""
+say "=== Fim: Máximo de Linguagem Natural ==="
+

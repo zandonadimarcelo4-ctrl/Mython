@@ -9,7 +9,13 @@ import tempfile
 import os
 import sys
 from pathlib import Path
-from mython.transpiler import transpile_file
+# Tentar usar Lark primeiro, fallback para versão antiga
+try:
+    from mython.transpiler_lark import transpile_file
+    LARK_AVAILABLE = True
+except ImportError:
+    from mython.transpiler import transpile_file
+    LARK_AVAILABLE = False
 
 # Configuração da página
 st.set_page_config(
@@ -624,7 +630,9 @@ blockly_html = """
                 console.log('Erro ao salvar no localStorage:', e);
             }
             
-            alert('Código Mython gerado!\\n\\nO código foi enviado automaticamente para o campo Mython.');
+            // Mostrar código gerado
+            var codeDisplay = code || 'Nenhum código gerado.';
+            alert('Código Mython gerado!\\n\\n' + codeDisplay.substring(0, 100) + '...\\n\\nClique em "🔄 Atualizar do Blockly" abaixo para carregar no campo Mython.');
         }
         
         function clearWorkspace() {
@@ -670,162 +678,31 @@ if "blockly_code" not in st.session_state:
 if "example_loaded" not in st.session_state:
     st.session_state.example_loaded = None
 
-# Container para Blockly
-st.header("🧩 Workspace Blockly")
+# Editor de código Mython (modo texto primeiro, blocos depois)
+st.header("📝 Editor Mython")
 
-# Tabs para diferentes modos
-tab1, tab2 = st.tabs(["🧩 Blocos Visuais", "📝 Código Direto"])
+st.markdown("### Escreva código Mython:")
+mython_code_input = st.text_area(
+    "Código Mython:",
+    value=st.session_state.blockly_code if st.session_state.blockly_code else "",
+    height=400,
+    key="mython_editor",
+    help="Escreva seu código Mython aqui. Os blocos visuais serão implementados depois."
+)
 
-with tab1:
-    st.markdown("""
-    ### 📖 Como usar:
-    1. **Arraste blocos** da toolbox à esquerda do workspace
-    2. **Conecte os blocos** arrastando
-    3. **Clique em "🔄 Gerar Mython"** no workspace (botão verde acima)
-    4. **O código será enviado automaticamente** para o campo abaixo! ✨
-    """)
-    
-    st.info("💡 **Dica**: O código gerado no Blockly será automaticamente preenchido no campo abaixo!")
-    
-    # JavaScript para capturar mensagens do iframe
-    capture_script = """
-    <script>
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'mython_code_generated') {
-                // Enviar código para Streamlit via componente
-                if (window.parent && window.parent.streamlit) {
-                    window.parent.streamlit.setComponentValue({
-                        type: 'mython_code',
-                        code: event.data.code
-                    });
-                }
-            }
-        });
-        
-        // Verificar localStorage periodicamente como fallback
-        setInterval(function() {
-            try {
-                var code = localStorage.getItem('mython_generated_code');
-                if (code && code !== '') {
-                    // Enviar para Streamlit
-                    if (window.parent && window.parent.streamlit) {
-                        window.parent.streamlit.setComponentValue({
-                            type: 'mython_code',
-                            code: code
-                        });
-                        localStorage.removeItem('mython_generated_code');
-                    }
-                }
-            } catch (e) {
-                // Ignorar erros
-            }
-        }, 500);
-    </script>
-    """
-    
-    # Usar iframe para embedar Blockly com script de captura
-    blockly_with_capture = capture_script + blockly_html
-    
-    # Componente para receber código do Blockly
-    # Usar um componente customizado que pode receber valores
-    blockly_container = st.container()
-    
-    with blockly_container:
-        # Renderizar Blockly
-        st.components.v1.html(
-            blockly_with_capture, 
-            height=700, 
-            scrolling=False
-        )
-        
-        # Botão para atualizar manualmente (fallback)
-        if st.button("🔄 Atualizar Código do Blockly", use_container_width=True):
-            # Tentar ler do localStorage via JavaScript
-            st.info("💡 Se o código não apareceu automaticamente, clique em 'Gerar Mython' novamente no workspace acima.")
-    
-    # Input para código gerado (será preenchido automaticamente)
-    st.markdown("### 📝 Código Mython gerado (preenchido automaticamente):")
-    
-    # Verificar se há código novo no session state
-    if "new_blockly_code" in st.session_state:
-        st.session_state.blockly_code = st.session_state.new_blockly_code
-        del st.session_state.new_blockly_code
-    
-    # Campo que será atualizado automaticamente
-    # Usar um componente que pode ser atualizado via JavaScript
-    code_input_key = "mython_code_input_" + str(time.time())
-    
-    manual_code = st.text_area(
-        "Código Mython:",
-        value=st.session_state.blockly_code,
-        height=200,
-        key="manual_mython",
-        help="Este campo é preenchido automaticamente quando você gera código no Blockly acima"
-    )
-    
-    # JavaScript inline para atualizar o campo quando receber código
-    update_script = f"""
-    <script>
-        // Listener para mensagens do iframe Blockly
-        window.addEventListener('message', function(event) {{
-            if (event.data && event.data.type === 'mython_code_generated') {{
-                // Atualizar o campo de texto via DOM
-                var textarea = document.querySelector('textarea[key="manual_mython"]');
-                if (textarea) {{
-                    textarea.value = event.data.code;
-                    // Disparar evento de input para o Streamlit detectar
-                    var event = new Event('input', {{ bubbles: true }});
-                    textarea.dispatchEvent(event);
-                }}
-            }}
-        }});
-        
-        // Verificar localStorage a cada 500ms
-        setInterval(function() {{
-            try {{
-                var code = localStorage.getItem('mython_generated_code');
-                if (code && code !== '') {{
-                    var textarea = document.querySelector('textarea[key="manual_mython"]');
-                    if (textarea && textarea.value !== code) {{
-                        textarea.value = code;
-                        var event = new Event('input', {{ bubbles: true }});
-                        textarea.dispatchEvent(event);
-                        localStorage.removeItem('mython_generated_code');
-                    }}
-                }}
-            }} catch (e) {{
-                // Ignorar erros
-            }}
-        }}, 500);
-    </script>
-    """
-    
-    st.components.v1.html(update_script, height=0)
-    
-    if manual_code:
-        st.session_state.blockly_code = manual_code
-        mython_code = manual_code
+if mython_code_input:
+    mython_code = mython_code_input
+    st.session_state.blockly_code = mython_code_input
+else:
+    mython_code = st.session_state.blockly_code if st.session_state.blockly_code else ""
 
-with tab2:
-    st.markdown("### Escreva código Mython diretamente:")
-    direct_code = st.text_area(
-        "Código Mython:",
-        value=st.session_state.blockly_code if not st.session_state.blockly_code else st.session_state.blockly_code,
-        height=300,
-        key="direct_mython"
-    )
-    
-    if direct_code:
-        mython_code = direct_code
-        st.session_state.blockly_code = direct_code
+# Seção de blocos (será implementada depois)
+st.markdown("---")
+st.markdown("### 🧩 Blocos Visuais (Em Desenvolvimento)")
+st.info("🚧 **Os blocos visuais serão implementados em uma versão futura. Por enquanto, use o editor de texto acima.**")
 
-    # Usar código da session state ou do input
-    if manual_code:
-        mython_code = manual_code
-    elif "mython_code_input" in st.session_state:
-        mython_code = st.session_state.mython_code_input
-    else:
-        mython_code = st.session_state.blockly_code
+# TODO: Implementar blocos Blockly depois
+# O código dos blocos está preparado mas será ativado futuramente
 
 # Botões de ação
 col1, col2, col3 = st.columns([1, 1, 2])

@@ -7,7 +7,14 @@ import sys
 from pathlib import Path
 import subprocess
 
-from .transpiler import transpile_file
+try:
+    # Tentar usar Lark (versão robusta)
+    from .transpiler_lark import transpile_file
+    USE_LARK = True
+except ImportError:
+    # Fallback para versão antiga (regex)
+    from .transpiler import transpile_file
+    USE_LARK = False
 
 
 def main():
@@ -45,6 +52,12 @@ Exemplos:
         help="Não gera arquivo .py, apenas transpila na memória"
     )
     
+    parser.add_argument(
+        "--lang", "-l",
+        default=None,
+        help="Código da língua do código (en, pt, es, fr, etc.) - se não especificado, detecta automaticamente"
+    )
+    
     args = parser.parse_args()
     
     input_file = Path(args.file)
@@ -66,7 +79,8 @@ Exemplos:
     
     try:
         # Transpilar
-        python_code = transpile_file(str(input_file), output_file)
+        # Se lang não foi especificado, None será passado e o transpiler detectará automaticamente
+        python_code = transpile_file(str(input_file), output_file, lang=args.lang)
         
         if output_file:
             print(f"[OK] Transpilado com sucesso: {output_file}")

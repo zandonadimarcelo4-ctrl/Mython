@@ -9,6 +9,9 @@ description = "A linguagem mais simples do mundo baseada em lógica e inglês A2
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
+dependencies = [
+    "lark>=1.1.0",
+]
 authors = [
     {name = "Mython Team"}
 ]

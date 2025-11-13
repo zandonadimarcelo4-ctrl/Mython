@@ -1,0 +1,138 @@
+# Exemplo: Macros e Atalhos Comuns
+# Demonstra operações comuns como palavras simples
+
+# ============================================
+# OPERAÇÕES MATEMÁTICAS
+# ============================================
+set x = 10
+set y = 5
+
+# Adição
+set result1 = add x and y
+set result2 = sum x and y
+set result3 = plus x and y
+
+# Subtração
+set result4 = subtract y from x
+set result5 = minus y from x
+
+# Multiplicação
+set result6 = multiply x by y
+set result7 = times x by y
+
+# Divisão
+set result8 = divide x by y
+
+say "Math results:"
+say result1
+say result2
+say result3
+say result4
+say result5
+say result6
+say result7
+say result8
+
+# ============================================
+# OPERAÇÕES DE STRING
+# ============================================
+list words = ["hello", "world", "python"]
+set text = "hello,world,python"
+
+# Join
+set joined1 = join words with " "
+set joined2 = combine words with "-"
+
+# Split
+set parts1 = split text by ","
+set parts2 = separate text by ","
+
+# Uppercase/Lowercase
+set name = "Mython"
+set upper = uppercase name
+set lower = lowercase name
+set upper2 = to uppercase name
+set lower2 = to lowercase name
+
+say ""
+say "String operations:"
+say joined1
+say joined2
+say parts1
+say upper
+say lower
+
+# ============================================
+# OPERAÇÕES DE LISTA
+# ============================================
+list numbers = [3, 1, 4, 1, 5, 9, 2, 6]
+
+# Length/Size/Count
+set len1 = length of numbers
+set len2 = size of numbers
+set len3 = count items in numbers
+
+# First/Last
+set first = first item in numbers
+set last = last item in numbers
+
+# Reverse/Flip
+set reversed1 = reverse numbers
+set reversed2 = flip numbers
+
+# Sort/Order
+set sorted1 = sort numbers
+set sorted2 = order numbers
+
+say ""
+say "List operations:"
+say "Length: " + str(len1)
+say "First: " + str(first)
+say "Last: " + str(last)
+say "Reversed: " + str(reversed1)
+say "Sorted: " + str(sorted1)
+
+# ============================================
+# OPERAÇÕES DE ARQUIVO
+# ============================================
+# Verificar se arquivo existe
+if exists file "test.txt":
+    say "File exists!"
+else:
+    say "File does not exist"
+
+if file exists "data.txt":
+    say "Data file exists!"
+
+# Criar arquivo de teste
+save text "Hello, World!" to file "test.txt"
+
+# Verificar novamente
+if exists file "test.txt":
+    say "Test file created successfully!"
+
+# ============================================
+# OPERAÇÕES DE DATA/HORA
+# ============================================
+set now1 = current time
+set now2 = now
+set today1 = today
+set current_date = current date
+
+say ""
+say "Date/Time:"
+say now1
+say today1
+
+# ============================================
+# OPERAÇÕES DE SISTEMA
+# ============================================
+say ""
+say "Program will exit..."
+# exit program
+# quit program
+# stop program
+
+say ""
+say "=== Fim: Macros e Atalhos ==="
+

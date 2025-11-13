@@ -1,0 +1,299 @@
+# Exemplo: 99% de Cobertura Python
+# Demonstra quase tudo que Python pode fazer
+
+# ============================================
+# COMPREHENSIONS
+# ============================================
+say "=== Comprehensions ==="
+
+# List comprehension
+list squares = [x**2 for x in range(10)]
+say "Squares: " + str(squares)
+
+# Dict comprehension
+dict doubled = {k: v*2 for k, v in {"a": 1, "b": 2}.items()}
+say "Doubled: " + str(doubled)
+
+# Set comprehension
+set unique_squares = {x**2 for x in [1, 2, 2, 3, 3, 4]}
+say "Unique squares: " + str(unique_squares)
+
+# ============================================
+# SLICING
+# ============================================
+say ""
+say "=== Slicing ==="
+
+list numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+# Slicing via Python puro (funciona)
+set first_three = numbers[0:3]
+say "First 3: " + str(first_three)
+
+set last_three = numbers[-3:]
+say "Last 3: " + str(last_three)
+
+set middle = numbers[2:7]
+say "Middle: " + str(middle)
+
+# ============================================
+# OPERADOR IN/NOT IN
+# ============================================
+say ""
+say "=== Operador In ==="
+
+list fruits = ["apple", "banana", "orange"]
+
+# Usando Python puro (funciona)
+if "apple" in fruits:
+    say "Apple found!"
+
+if "grape" not in fruits:
+    say "Grape not found!"
+
+# ============================================
+# ARGUMENTOS PADRÃO E *ARGS/**KWARGS
+# ============================================
+say ""
+say "=== Funções Avançadas ==="
+
+# Argumentos padrão (Python puro)
+define greet(name="World"):
+    say "Hello, " + name + "!"
+
+greet()
+greet("Alice")
+
+# *args e **kwargs (Python puro)
+define print_all(*args, **kwargs):
+    say "Args: " + str(args)
+    say "Kwargs: " + str(kwargs)
+
+print_all(1, 2, 3, name="Alice", age=25)
+
+# ============================================
+# FUNÇÕES ANINHADAS
+# ============================================
+say ""
+say "=== Funções Aninhadas ==="
+
+define outer(x):
+    define inner(y):
+        return x + y
+    return inner(10)
+
+set result = outer(5)
+say "Nested function result: " + str(result)
+
+# ============================================
+# MÉTODOS ESPECIAIS (Magic Methods)
+# ============================================
+say ""
+say "=== Magic Methods ==="
+
+class Person:
+    init(name, age):
+        set self.name = name
+        set self.age = age
+    
+    # Magic method via Python puro
+    def __str__(self):
+        return f"{self.name} ({self.age})"
+    
+    def __len__(self):
+        return len(self.name)
+    
+    def __repr__(self):
+        return f"Person('{self.name}', {self.age})"
+
+set person = Person("Alice", 25)
+say "Person: " + str(person)
+say "Length: " + str(len(person))
+
+# ============================================
+# MÚLTIPLA HERANÇA
+# ============================================
+say ""
+say "=== Múltipla Herança ==="
+
+class A:
+    task method_a():
+        say "Method A"
+
+class B:
+    task method_b():
+        say "Method B"
+
+class C(A, B):
+    task method_c():
+        say "Method C"
+
+set c = C()
+c.method_a()
+c.method_b()
+c.method_c()
+
+# ============================================
+# TYPE HINTS
+# ============================================
+say ""
+say "=== Type Hints ==="
+
+# Type hints via Python puro
+def add_numbers(a: int, b: int) -> int:
+    return a + b
+
+set sum_result = add_numbers(5, 3)
+say "Sum: " + str(sum_result)
+
+# ============================================
+# WALRUS OPERATOR (Python 3.8+)
+# ============================================
+say ""
+say "=== Walrus Operator ==="
+
+# Walrus operator via Python puro
+list data = [1, 2, 3, 4, 5]
+if (n := len(data)) > 3:
+    say "List has " + str(n) + " items (more than 3)"
+
+# ============================================
+# CONTEXT MANAGERS CUSTOMIZADOS
+# ============================================
+say ""
+say "=== Context Managers ==="
+
+# Context manager via Python puro
+class MyContext:
+    def __enter__(self):
+        say "Entering context"
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        say "Exiting context"
+        return False
+
+with MyContext() as ctx:
+    say "Inside context"
+
+# ============================================
+# GENERATORS AVANÇADOS
+# ============================================
+say ""
+say "=== Generators Avançados ==="
+
+define fibonacci(n):
+    set a, b = 0, 1
+    set count = 0
+    while count < n:
+        yield a
+        set a, b = b, a + b
+        set count += 1
+
+say "Fibonacci:"
+for each num in fibonacci(10):
+    say num
+
+# ============================================
+# DECORATORS COM ARGUMENTOS
+# ============================================
+say ""
+say "=== Decorators Avançados ==="
+
+# Decorator com argumentos via Python puro
+def repeat(times):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for i in range(times):
+                func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@repeat(3)
+def say_hello():
+    say "Hello!"
+
+say_hello()
+
+# ============================================
+# ENUMS
+# ============================================
+say ""
+say "=== Enums ==="
+
+# Enum via Python puro
+from enum import Enum
+
+class Color(Enum):
+    RED = 1
+    GREEN = 2
+    BLUE = 3
+
+say "Color: " + str(Color.RED)
+say "Color name: " + Color.RED.name
+
+# ============================================
+# DATACLASSES
+# ============================================
+say ""
+say "=== Dataclasses ==="
+
+# Dataclass via Python puro
+from dataclasses import dataclass
+
+@dataclass
+class Point:
+    x: int
+    y: int
+
+set point = Point(10, 20)
+say "Point: " + str(point)
+say "Point x: " + str(point.x)
+
+# ============================================
+# ABSTRACT BASE CLASSES
+# ============================================
+say ""
+say "=== ABC ==="
+
+# ABC via Python puro
+from abc import ABC, abstractmethod
+
+class Shape(ABC):
+    @abstractmethod
+    def area(self):
+        pass
+
+class Rectangle(Shape):
+    init(width, height):
+        set self.width = width
+        set self.height = height
+    
+    def area(self):
+        return self.width * self.height
+
+set rect = Rectangle(10, 5)
+say "Rectangle area: " + str(rect.area())
+
+# ============================================
+# ASYNC AVANÇADO
+# ============================================
+say ""
+say "=== Async Avançado ==="
+
+# Async avançado via Python puro
+import asyncio
+
+async def fetch_data():
+    await asyncio.sleep(0.1)
+    return "Data fetched"
+
+async def main():
+    set result = await fetch_data()
+    say "Async result: " + result
+
+# asyncio.run(main())  # Descomente para executar
+
+say ""
+say "=== Fim: 99% de Cobertura Python ==="
+

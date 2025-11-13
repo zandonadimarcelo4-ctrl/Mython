@@ -1,0 +1,222 @@
+# Exemplo: Linguagem Natural e Intuitiva
+# Demonstra como Mython é quase linguagem natural
+
+# ============================================
+# SAÍDA - Múltiplas formas de dizer
+# ============================================
+say "Hello, World!"
+print "This also works"
+show "You can use 'show' too"
+display "Or 'display'"
+tell "Even 'tell' works!"
+
+# ============================================
+# ENTRADA - Múltiplas formas de pedir
+# ============================================
+ask name "What is your name? "
+ask for age "What is your age? "
+get email "Enter your email: "
+read phone "Enter your phone: "
+prompt city "Enter your city: "
+
+ask number count "How many items? "
+ask for number price "What is the price? "
+get number quantity "How many? "
+read number total "What is the total? "
+
+# ============================================
+# CONDIÇÕES - Linguagem Natural
+# ============================================
+if age is over 18:
+    say "You are an adult"
+
+if age is over 18:
+    say "You are an adult"
+
+if age is at least 18:
+    say "You are at least 18"
+
+if age is under 18:
+    say "You are a minor"
+
+if name is "Alice":
+    say "Hello Alice!"
+
+if name is not "Bob":
+    say "You are not Bob"
+
+if name equals "Charlie":
+    say "Hello Charlie!"
+
+when age is over 21:
+    say "You can drink"
+
+whenever count is greater than 10:
+    say "Too many items"
+
+# ============================================
+# LOOPS - Linguagem Natural
+# ============================================
+repeat 5 times:
+    say "Hello"
+
+do 3 times:
+    say "Hi"
+
+loop 2 times:
+    say "Hey"
+
+for each name in names:
+    say name
+
+for every item in items:
+    say item
+
+loop through names as name:
+    say name
+
+iterate over items as item:
+    say item
+
+while count is greater than 0:
+    say count
+    set count = count - 1
+
+as long as count is over 0:
+    say count
+    set count = count - 1
+
+keep doing while count is greater than 0:
+    say count
+    set count = count - 1
+
+# ============================================
+# LISTAS - Linguagem Natural
+# ============================================
+list names = ["Alice", "Bob"]
+create list items = [1, 2, 3]
+make list numbers = [10, 20, 30]
+
+add "Charlie" to names
+append "David" to names
+put "Eve" into names
+insert "Frank" into names
+
+remove "Alice" from names
+delete "Bob" from names
+take out "Charlie" from names
+
+# ============================================
+# FUNÇÕES - Linguagem Natural
+# ============================================
+define greet(name):
+    say "Hello, " + name
+
+function calculate(x, y):
+    return x + y
+
+to multiply(a, b):
+    return a * b
+
+create function divide(x, y):
+    return x / y
+
+# ============================================
+# RETORNO - Linguagem Natural
+# ============================================
+define get_name():
+    return "Alice"
+
+define get_age():
+    give back 25
+
+define get_email():
+    send back "alice@example.com"
+
+# ============================================
+# ARQUIVOS - Linguagem Natural
+# ============================================
+open "data.txt" as file:
+    say file.read()
+
+open file "data.txt" as file:
+    say file.read()
+
+read file "data.txt" as content:
+    say content
+
+load file "data.txt" as data:
+    say data
+
+save text "Hello" to file "output.txt"
+write "World" to file "output.txt"
+save "Data" to file "output.txt"
+store "Info" in file "output.txt"
+
+read file "input.txt" as text
+load file "input.txt" as content
+get from file "input.txt" as data
+
+# ============================================
+# ESPERA - Linguagem Natural
+# ============================================
+wait 2 seconds
+pause 1 second
+sleep 3 seconds
+delay 0.5 seconds
+
+# ============================================
+# EXCEÇÕES - Linguagem Natural
+# ============================================
+attempt:
+    risky_operation()
+catch error:
+    say "Something went wrong"
+
+try:
+    another_operation()
+handle ValueError as e:
+    say "Value error: " + str(e)
+
+attempt to:
+    do_something()
+on error:
+    say "Error occurred"
+
+finally:
+    say "Always runs"
+
+always:
+    say "This always runs"
+
+in the end:
+    say "Finally block"
+
+# ============================================
+# ELSE - Linguagem Natural
+# ============================================
+if age is over 18:
+    say "Adult"
+otherwise:
+    say "Minor"
+
+if count is greater than 10:
+    say "Many"
+else:
+    say "Few"
+
+# ============================================
+# ELIF - Linguagem Natural
+# ============================================
+if age is over 18:
+    say "Adult"
+else if age is over 13:
+    say "Teen"
+or if age is over 5:
+    say "Child"
+else:
+    say "Baby"
+
+say ""
+say "=== Fim: Linguagem Natural ==="
+

@@ -1,0 +1,8 @@
+# Teste de detecção automática - English
+say "Hello, World!"
+ask name "What is your name? "
+if name is "John":
+    say "Hello John!"
+else:
+    say "Hello " + name
+

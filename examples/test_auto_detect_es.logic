@@ -1,0 +1,8 @@
+# Teste de detecção automática - Español
+decir "Hola, Mundo!"
+preguntar nombre "¿Cuál es tu nombre? "
+si nombre es "Juan":
+    decir "Hola Juan!"
+sino:
+    decir "Hola " + nombre
+

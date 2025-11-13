@@ -1,0 +1,139 @@
+# Exemplo: Recursos Avançados do Mython
+# Demonstra tudo que foi implementado
+
+# ============================================
+# DICIONÁRIOS
+# ============================================
+say "=== Dicionários ==="
+
+dict person = {"name": "Alice", "age": 25}
+say "Name: " + person["name"]
+say "Age: " + str(person["age"])
+
+# ============================================
+# OPERADORES DE ATRIBUIÇÃO AUMENTADA
+# ============================================
+say ""
+say "=== Operadores Aumentados ==="
+
+set x = 10
+set x = x + 5  # Normal
+say "x = " + str(x)
+
+set y = 10
+set y += 5  # Aumentado
+say "y = " + str(y)
+
+set count = 0
+set count += 1
+set count += 1
+say "Count: " + str(count)
+
+# ============================================
+# TUPLAS E SETS
+# ============================================
+say ""
+say "=== Tuplas e Sets ==="
+
+tuple coordinates = (10, 20)
+say "Coordinates: " + str(coordinates)
+
+set unique_numbers = {1, 2, 3, 3, 4}
+say "Unique: " + str(unique_numbers)
+
+# ============================================
+# HERANÇA DE CLASSES
+# ============================================
+say ""
+say "=== Herança ==="
+
+class Animal:
+    init(name):
+        set self.name = name
+    
+    task speak():
+        say "Some sound"
+
+class Dog(Animal):
+    init(name):
+        set self.name = name
+    
+    task speak():
+        say self.name + " says Woof!"
+
+set dog = Dog("Buddy")
+dog.speak()
+
+# ============================================
+# GENERATORS (yield)
+# ============================================
+say ""
+say "=== Generators ==="
+
+define count_up_to(max):
+    set n = 1
+    while n <= max:
+        yield n
+        set n += 1
+
+say "Counting:"
+for each num in count_up_to(5):
+    say num
+
+# ============================================
+# DECORATORS AVANÇADOS
+# ============================================
+say ""
+say "=== Decorators ==="
+
+class Calculator:
+    @staticmethod
+    task add(a, b):
+        return a + b
+    
+    @classmethod
+    task create(cls):
+        return cls()
+
+# ============================================
+# MATCH/CASE (Python 3.10+)
+# ============================================
+say ""
+say "=== Match/Case ==="
+
+set status = "success"
+
+match status:
+    case "success":
+        say "Operation successful"
+    case "error":
+        say "Operation failed"
+    case _:
+        say "Unknown status"
+
+# ============================================
+# MISTURANDO COM PYTHON PURO
+# ============================================
+say ""
+say "=== Misturando Mython + Python ==="
+
+# Mython simples
+say "Processing..."
+
+# Python puro para coisas avançadas
+import json
+data = {"mython": "works", "python": "too"}
+json_str = json.dumps(data)
+say "JSON: " + json_str
+
+# List comprehension (Python puro)
+squares = [x**2 for x in range(5)]
+say "Squares: " + str(squares)
+
+# Dict comprehension (Python puro)
+doubled = {k: v*2 for k, v in data.items()}
+say "Doubled: " + str(doubled)
+
+say ""
+say "=== Fim dos Exemplos ==="
+
