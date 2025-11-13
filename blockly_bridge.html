@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Blockly Bridge</title>
+</head>
+<body>
+    <script>
+        // Bridge para comunicação entre Blockly iframe e Streamlit
+        window.addEventListener('message', function(event) {
+            // Receber código do Blockly
+            if (event.data && event.data.type === 'mython_code_generated') {
+                // Enviar para Streamlit
+                if (window.parent && window.parent.streamlit) {
+                    window.parent.streamlit.setComponentValue({
+                        type: 'mython_code',
+                        code: event.data.code
+                    });
+                }
+            }
+        });
+        
+        // Verificar localStorage periodicamente
+        setInterval(function() {
+            try {
+                var code = localStorage.getItem('mython_generated_code');
+                if (code && code !== '') {
+                    if (window.parent && window.parent.streamlit) {
+                        window.parent.streamlit.setComponentValue({
+                            type: 'mython_code',
+                            code: code
+                        });
+                        localStorage.removeItem('mython_generated_code');
+                    }
+                }
+            } catch (e) {
+                // Ignorar
+            }
+        }, 500);
+    </script>
+</body>
+</html>
+
