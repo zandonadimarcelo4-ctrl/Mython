@@ -735,8 +735,7 @@ with tab1:
         st.components.v1.html(
             blockly_with_capture, 
             height=700, 
-            scrolling=False,
-            key="blockly_workspace"
+            scrolling=False
         )
         
         # Botão para atualizar manualmente (fallback)
