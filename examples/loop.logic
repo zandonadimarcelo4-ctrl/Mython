@@ -1,0 +1,14 @@
+# Exemplo: loops e repetições
+say "Contando até 5:"
+repeat 5 times:
+    say "Olá!"
+
+say "Números de 1 a 10:"
+list numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+for each num in numbers:
+    if num is over 5:
+        say str(num) + " é maior que 5"
+    else:
+        say str(num) + " é menor ou igual a 5"
+

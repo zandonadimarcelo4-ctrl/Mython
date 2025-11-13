@@ -1,0 +1,62 @@
+# Demonstração: Como Mython traduz para Python
+# Este arquivo mostra exemplos de tradução
+
+# 1. Lógica Básica
+say "=== Exemplo 1: Lógica Básica ==="
+ask number age "Your age: "
+if age is over 18:
+    say "You are an adult"
+else:
+    say "You are a minor"
+
+# 2. Listas e Loops
+say ""
+say "=== Exemplo 2: Listas ==="
+list names = ["Alice", "Bob", "Charlie"]
+for each name in names:
+    say "Hello, " + name
+
+# 3. Funções
+say ""
+say "=== Exemplo 3: Funções ==="
+define greet(name):
+    say "Hello, " + name + "!"
+
+greet("World")
+
+# 4. Classes
+say ""
+say "=== Exemplo 4: Classes ==="
+class Person:
+    init(name):
+        set self.name = name
+    
+    task introduce():
+        say "Hi, I'm " + self.name
+
+set person = Person("Alice")
+person.introduce()
+
+# 5. Arquivos
+say ""
+say "=== Exemplo 5: Arquivos ==="
+save text "Hello from Mython!" to file "test_output.txt"
+read file "test_output.txt" as content
+say "File content: " + content
+
+# 6. Python Puro Misturado
+say ""
+say "=== Exemplo 6: Python Puro ==="
+import math
+set pi_value = math.pi
+say "Pi value: " + str(pi_value)
+
+# 7. Utilitários
+say ""
+say "=== Exemplo 7: Utilitários ==="
+set random_num = random number from 1 to 100
+say "Random number: " + str(random_num)
+
+say ""
+say "=== Fim da Demonstração ==="
+

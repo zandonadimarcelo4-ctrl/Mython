@@ -1,0 +1,20 @@
+# Exemplo: Classes em Mython
+class Person:
+    init(name, age):
+        set self.name = name
+        set self.age = age
+    
+    task greet():
+        say "Hello, I am " + self.name
+        say "I am " + str(self.age) + " years old"
+    
+    task have_birthday():
+        set self.age = self.age + 1
+        say "Happy birthday! Now I am " + str(self.age)
+
+# Criar e usar
+set person = Person("Alice", 25)
+person.greet()
+person.have_birthday()
+person.greet()
+

@@ -1,0 +1,136 @@
+# Demonstração: Padrões Reais de Pseudocódigo (Inglês)
+# Baseado em Pseudocódigo Estruturado Clássico, AppleScript, Gherkin, Blockly
+
+# ============================================
+# PSEUDOCÓDIGO ESTRUTURADO CLÁSSICO
+# ============================================
+say "=== Pseudocódigo Estruturado Clássico ==="
+
+# SET variável TO valor
+set x = 10
+set name = "Alice"
+
+# OUTPUT valor
+say "x = " + str(x)
+say "name = " + name
+
+# IF condição THEN ... ELSE ... END IF
+if x is over 5:
+    say "x is big"
+else:
+    say "x is small"
+
+# FOR EACH item IN list
+list items = [1, 2, 3, 4, 5]
+say "Items:"
+for each item in items:
+    say item
+
+# REPEAT N TIMES
+say "Counting:"
+repeat 3 times:
+    say "Hello"
+
+# WHILE condição DO
+set count = 0
+while count is under 3:
+    say "Count: " + str(count)
+    set count = count + 1
+
+# FUNCTION nome(parâmetros) ... RETURN valor
+define add(a, b):
+    set result = a + b
+    return result
+
+set sum = add(5, 3)
+say "5 + 3 = " + str(sum)
+
+# ============================================
+# PADRÕES APPLESCRIPT (Inglês)
+# ============================================
+say ""
+say "=== AppleScript Patterns (English) ==="
+
+# say "hello"
+say "Hello from Mython!"
+
+# get x / ask for input
+ask name "Enter your name: "
+say "Hello, " + name
+
+# if x then ... else ... end if
+ask number age "Enter your age: "
+if age is over 18:
+    say "You are an adult"
+else:
+    say "You are a minor"
+
+# repeat N times ... end repeat
+say "Counting from 1 to 5:"
+repeat 5 times:
+    say "Number"
+
+# repeat while condition
+set i = 1
+while i is under 4:
+    say "i = " + str(i)
+    set i = i + 1
+
+# ============================================
+# PADRÕES BLOCKLY TEXTUAL (Inglês)
+# ============================================
+say ""
+say "=== Blockly Textual Patterns (English) ==="
+
+# print "hello"
+say "Hello from Blockly pattern"
+
+# repeat N times
+say "Repeating 3 times:"
+repeat 3 times:
+    say "Blockly style"
+
+# ============================================
+# PADRÕES GHERKIN (BDD)
+# ============================================
+say ""
+say "=== Padrões Gherkin ==="
+
+# Given/When/Then
+given user is logged in:
+    set logged = true
+    say "User is logged in"
+
+when user clicks button:
+    if logged:
+        say "Button clicked"
+
+then show menu:
+    say "Menu displayed"
+
+# ============================================
+# EXEMPLO COMPLETO: Average Algorithm
+# (Classic university pattern)
+# ============================================
+say ""
+say "=== Average Algorithm (Classic Pattern) ==="
+
+# ALGORITHM Average
+# VAR n1, n2, average: REAL
+# BEGIN
+#     OUTPUT "Enter first number: "
+#     INPUT n1
+#     OUTPUT "Enter second number: "
+#     INPUT n2
+#     SET average TO (n1 + n2) / 2
+#     OUTPUT "The average is: ", average
+# END
+
+ask number n1 "Enter first number: "
+ask number n2 "Enter second number: "
+set average = (n1 + n2) / 2
+say "The average is: " + str(average)
+
+say ""
+say "=== Fim da Demonstração ==="
+

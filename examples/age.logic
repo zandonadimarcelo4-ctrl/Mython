@@ -1,0 +1,8 @@
+# Exemplo: verificar idade
+ask number age "Digite sua idade: "
+
+if age is over 17:
+    say "Você é maior de idade"
+else:
+    say "Você é menor de idade"
+

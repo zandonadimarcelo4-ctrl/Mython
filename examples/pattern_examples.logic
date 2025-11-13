@@ -1,0 +1,150 @@
+# Exemplos de Padrões do Dicionário
+# Baseado em Pseudocódigo Clássico + DSLs de Ação
+
+# ============================================
+# PSEUDOCÓDIGO ESTRUTURADO CLÁSSICO
+# ============================================
+say "=== Pseudocódigo Estruturado Clássico ==="
+
+# SET (Atribuição)
+set x = 10
+set name = "Alice"
+say "x = " + str(x)
+say "name = " + name
+
+# IF/THEN/ELSE
+if x is over 5:
+    say "x is big"
+else:
+    say "x is small"
+
+# FOR EACH
+list items = [1, 2, 3, 4, 5]
+say "Items:"
+for each item in items:
+    say item
+
+# REPEAT
+say "Counting:"
+repeat 3 times:
+    say "Hello"
+
+# WHILE
+set count = 0
+while count is under 3:
+    say "Count: " + str(count)
+    set count = count + 1
+
+# FUNCTION/RETURN
+define add(a, b):
+    set result = a + b
+    return result
+
+set sum = add(5, 3)
+say "5 + 3 = " + str(sum)
+
+# ============================================
+# APPLESCRIPT (DSL de Ação)
+# ============================================
+say ""
+say "=== AppleScript Patterns ==="
+
+# say (comando natural)
+say "Hello from AppleScript pattern"
+
+# open file
+open "test_output.txt" as file:
+    set content = file.read()
+    say "File content: " + content
+
+# repeat natural
+say "Repeating 2 times:"
+repeat 2 times:
+    say "AppleScript style"
+
+# ============================================
+# GHERKIN (BDD)
+# ============================================
+say ""
+say "=== Gherkin Patterns ==="
+
+# Given/When/Then structure
+given user is logged in:
+    set logged = true
+    say "User is logged in"
+
+when user clicks button:
+    if logged:
+        say "Button clicked"
+
+then show menu:
+    say "Menu displayed"
+
+# ============================================
+# BLOCKLY TEXTUAL
+# ============================================
+say ""
+say "=== Blockly Textual Patterns ==="
+
+# print block
+say "Hello from Blockly"
+
+# set block
+set value = 42
+say "Value: " + str(value)
+
+# repeat until
+set done = false
+set attempts = 0
+repeat until done:
+    set attempts = attempts + 1
+    say "Attempt " + str(attempts)
+    if attempts is over 2:
+        set done = true
+
+# ============================================
+# PADRÕES COMBINADOS
+# ============================================
+say ""
+say "=== Padrões Combinados ==="
+
+# Loop com condição
+list numbers = [5, 10, 15, 20]
+say "Numbers over 10:"
+for each num in numbers:
+    if num is over 10:
+        say num
+
+# Função com múltiplas condições
+define classify(age):
+    if age is over 18:
+        return "adult"
+    elif age is over 12:
+        return "teen"
+    else:
+        return "child"
+
+say "Age 20: " + classify(20)
+say "Age 15: " + classify(15)
+say "Age 8: " + classify(8)
+
+# Classe completa
+class Counter:
+    init():
+        set self.value = 0
+    
+    task increment():
+        set self.value = self.value + 1
+        return self.value
+    
+    task get_value():
+        return self.value
+
+set counter = Counter()
+say "Counter value: " + str(counter.get_value())
+counter.increment()
+say "After increment: " + str(counter.get_value())
+
+say ""
+say "=== Fim dos Exemplos ==="
+

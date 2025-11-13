@@ -1,0 +1,20 @@
+# Exemplo: Agente Autônomo (estrutura conceitual)
+agent Jarvis:
+    goal "Help the user with tasks"
+    
+    tool browser
+    tool python
+    tool calculator
+    
+    task think(question):
+        say "Thinking about: " + question
+        return "I can help with that"
+    
+    task execute(action):
+        say "Executing: " + action
+        return "Done"
+
+set agent = Jarvis()
+set response = agent.think("What is 2+2?")
+say response
+

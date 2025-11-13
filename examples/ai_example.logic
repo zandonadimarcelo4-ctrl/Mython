@@ -1,0 +1,17 @@
+# Exemplo: IA Avançada em Mython (conceitual)
+# Nota: Requer transformers e torch instalados
+
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+load model "gpt2" as model
+load tokenizer "gpt2" as tokenizer
+
+ask prompt "Enter your prompt: "
+
+set inputs = tokenizer(prompt, return_tensors="pt")
+set outputs = model.generate(**inputs, max_length=50)
+set generated_text = tokenizer.decode(outputs[0])
+
+say "Generated text:"
+say generated_text
+

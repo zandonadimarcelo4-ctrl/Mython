@@ -1,0 +1,159 @@
+# Guia Progressivo: Do Básico ao Avançado
+# Aprenda passo a passo, sempre de forma simples
+
+# ============================================
+# NÍVEL 1: Básico Absoluto
+# ============================================
+say "=== NÍVEL 1: Básico ==="
+say "Hello, World!"
+
+ask name "What is your name? "
+say "Hello, " + name
+
+ask number age "How old are you? "
+if age is over 18:
+    say "You are an adult"
+else:
+    say "You are a minor"
+
+# ============================================
+# NÍVEL 2: Loops e Listas
+# ============================================
+say ""
+say "=== NÍVEL 2: Loops e Listas ==="
+
+say "Counting to 3:"
+repeat 3 times:
+    say "Hello"
+
+list names = ["Alice", "Bob", "Charlie"]
+say "Greeting everyone:"
+for each name in names:
+    say "Hello, " + name
+
+list items = []
+add "apple" to items
+add "banana" to items
+say "Items in list:"
+for each item in items:
+    say item
+
+# ============================================
+# NÍVEL 3: Funções
+# ============================================
+say ""
+say "=== NÍVEL 3: Funções ==="
+
+define greet(name):
+    say "Hello, " + name
+
+greet("Alice")
+greet("Bob")
+
+define add_numbers(a, b):
+    set result = a + b
+    return result
+
+set sum = add_numbers(5, 3)
+say "5 + 3 = " + str(sum)
+
+define check_age(age):
+    if age is over 18:
+        return "adult"
+    else:
+        return "minor"
+
+set status = check_age(20)
+say "Status: " + status
+
+# ============================================
+# NÍVEL 4: Arquivos
+# ============================================
+say ""
+say "=== NÍVEL 4: Arquivos ==="
+
+save text "Hello from Mython!" to file "test_output.txt"
+say "File saved!"
+
+read file "test_output.txt" as content
+say "File content: " + content
+
+# ============================================
+# NÍVEL 5: Classes
+# ============================================
+say ""
+say "=== NÍVEL 5: Classes ==="
+
+class Person:
+    init(name, age):
+        set self.name = name
+        set self.age = age
+    
+    task introduce():
+        say "Hello, I am " + self.name
+        say "I am " + str(self.age) + " years old"
+    
+    task have_birthday():
+        set self.age = self.age + 1
+        say "Happy birthday! Now I am " + str(self.age)
+
+set person = Person("Alice", 25)
+person.introduce()
+person.have_birthday()
+person.introduce()
+
+# ============================================
+# NÍVEL 6: Tratamento de Erros
+# ============================================
+say ""
+say "=== NÍVEL 6: Tratamento de Erros ==="
+
+attempt:
+    set result = 10 / 2
+    say "Result: " + str(result)
+catch error:
+    say "Error: " + str(error)
+
+attempt:
+    set result = 10 / 0
+    say "Result: " + str(result)
+catch error:
+    say "Error caught: " + str(error)
+
+# ============================================
+# NÍVEL 7: Async (comentado - requer asyncio)
+# ============================================
+say ""
+say "=== NÍVEL 7: Async ==="
+say "(Descomente para testar)"
+
+# use asyncio
+# async task fetch_data(url):
+#     say "Fetching " + url
+#     await asyncio.sleep(1)
+#     return "Data from " + url
+# 
+# async task main():
+#     set data = await fetch_data("http://example.com")
+#     say data
+# 
+# asyncio.run(main())
+
+say "Async example skipped (requires asyncio)"
+
+# ============================================
+# RESUMO
+# ============================================
+say ""
+say "=== RESUMO ==="
+say "Você aprendeu:"
+say "1. Básico (say, ask, if)"
+say "2. Loops e listas"
+say "3. Funções"
+say "4. Arquivos"
+say "5. Classes"
+say "6. Tratamento de erros"
+say "7. Async (avançado)"
+say ""
+say "Continue praticando e experimentando!"
+

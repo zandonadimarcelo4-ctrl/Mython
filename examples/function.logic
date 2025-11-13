@@ -1,0 +1,17 @@
+# Exemplo: definir e usar funções
+define greet(name):
+    say "Olá, " + name + "!"
+
+define check_age(age):
+    if age is over 17:
+        say "Maior de idade"
+    else:
+        say "Menor de idade"
+
+# Usar as funções
+greet("Maria")
+greet("João")
+
+check_age(20)
+check_age(15)
+

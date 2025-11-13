@@ -1,0 +1,15 @@
+# Exemplo: aguardar (wait)
+say "Iniciando contagem regressiva..."
+
+repeat 3 times:
+    say "3"
+    wait 1 seconds
+
+say "2"
+wait 1 seconds
+
+say "1"
+wait 1 seconds
+
+say "Pronto!"
+

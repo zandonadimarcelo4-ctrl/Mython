@@ -1,0 +1,116 @@
+# Demonstração: Nível Máximo de Pseudocódigo Mython
+
+# ============================================
+# NÍVEL 1 - Mínimo Absoluto
+# ============================================
+say "=== Nível 1: Mínimo Absoluto ==="
+ask number age "Your age: "
+if age is over 18:
+    say "Adult"
+else:
+    say "Minor"
+
+# ============================================
+# NÍVEL 2 - Raciocínio Lógico
+# ============================================
+say ""
+say "=== Nível 2: Raciocínio Lógico ==="
+set success = false
+repeat until success:
+    say "Trying to connect..."
+    attempt:
+        # Simular conexão
+        set success = true
+        say "Connected!"
+    catch error:
+        say "Failed, retrying..."
+        wait 1 seconds
+
+# ============================================
+# NÍVEL 3 - Lógica Estruturada
+# ============================================
+say ""
+say "=== Nível 3: Lógica Estruturada ==="
+class Person:
+    init(name, age):
+        set self.name = name
+        set self.age = age
+    
+    task introduce():
+        say "Hello, I am " + self.name
+        say "I am " + str(self.age) + " years old"
+
+set person = Person("Alice", 25)
+person.introduce()
+
+# ============================================
+# NÍVEL 4 - Lógica Aplicada (IA)
+# ============================================
+say ""
+say "=== Nível 4: Lógica Aplicada ==="
+# Nota: Requer bibliotecas instaladas
+# use model "gpt2" as bot
+# ask question "Your question: "
+# set answer = bot.reply(question)
+# say answer
+
+# ============================================
+# NÍVEL 5 - Agentes Autônomos
+# ============================================
+say ""
+say "=== Nível 5: Agentes ==="
+agent Helper:
+    goal "Help the user"
+    tool calculator
+    tool search
+    
+    task answer(question):
+        say "Thinking about: " + question
+        return "I can help with that"
+
+# ============================================
+# NÍVEL 6 - Lógica Narrativa
+# ============================================
+say ""
+say "=== Nível 6: Lógica Narrativa ==="
+
+define clean_text(text):
+    # Remove espaços no final
+    set text = text.strip()
+    # Remove números
+    # (usando Python puro para regex)
+    import re
+    set text = re.sub(r'\d+', '', text)
+    # Torna minúsculo
+    set text = text.lower()
+    return text
+
+set sample = "Hello World 123"
+set cleaned = clean_text(sample)
+say "Original: " + sample
+say "Cleaned: " + cleaned
+
+# ============================================
+# NÍVEL FINAL - Sistema Completo
+# ============================================
+say ""
+say "=== Nível Final: Sistema Completo ==="
+
+define make_chatbot():
+    say "Starting chatbot..."
+    set running = true
+    
+    while running:
+        ask message "You: "
+        if message is "stop":
+            set running = false
+            say "Goodbye!"
+        else:
+            say "Bot: I received: " + message
+
+say "Chatbot demo (type 'stop' to exit):"
+# make_chatbot()  # Descomente para testar
+
+say ""
+say "=== Fim da Demonstração ==="
+

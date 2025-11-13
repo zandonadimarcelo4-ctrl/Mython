@@ -1,0 +1,13 @@
+# Exemplo: trabalhar com listas
+list names = ["ana", "bob"]
+
+say "Lista inicial:"
+for each name in names:
+    say name
+
+add "carlos" to names
+
+say "Depois de adicionar carlos:"
+for each name in names:
+    say name
+

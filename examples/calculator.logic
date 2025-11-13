@@ -1,0 +1,26 @@
+# Exemplo: calculadora simples
+ask number a "Digite o primeiro número: "
+ask number b "Digite o segundo número: "
+ask operation "Digite a operação (+, -, *, /): "
+
+if operation is "+":
+    result = a + b
+    say "Resultado: " + str(result)
+else:
+    if operation is "-":
+        result = a - b
+        say "Resultado: " + str(result)
+    else:
+        if operation is "*":
+            result = a * b
+            say "Resultado: " + str(result)
+        else:
+            if operation is "/":
+                if b is not 0:
+                    result = a / b
+                    say "Resultado: " + str(result)
+                else:
+                    say "Erro: divisão por zero!"
+            else:
+                say "Operação inválida!"
+

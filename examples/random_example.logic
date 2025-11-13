@@ -1,0 +1,7 @@
+# Exemplo: números aleatórios
+say "Gerando 5 números aleatórios entre 1 e 100:"
+
+repeat 5 times:
+    number = random number from 1 to 100
+    say "Número aleatório: " + str(number)
+

@@ -1,0 +1,41 @@
+# Exemplo demonstrando a filosofia do Mython
+# Lógica clara, frases naturais, zero complexidade sintática
+
+say "=== Bem-vindo ao Mython ==="
+say ""
+say "Mython permite escrever lógica de forma natural"
+say ""
+
+ask name "Digite seu nome: "
+say "Olá, " + name + "!"
+
+ask number age "Digite sua idade: "
+
+if age is over 17:
+    say "Você é maior de idade"
+else:
+    say "Você é menor de idade"
+
+say ""
+say "Vamos trabalhar com listas:"
+list fruits = ["maçã", "banana", "laranja"]
+
+say "Frutas iniciais:"
+for each fruit in fruits:
+    say "  - " + fruit
+
+add "uva" to fruits
+say ""
+say "Depois de adicionar uva:"
+for each fruit in fruits:
+    say "  - " + fruit
+
+say ""
+say "Gerando números aleatórios:"
+repeat 3 times:
+    number = random number from 1 to 10
+    say "Número aleatório: " + str(number)
+
+say ""
+say "Fim do exemplo!"
+

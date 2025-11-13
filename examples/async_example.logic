@@ -1,0 +1,18 @@
+# Exemplo: Async/Await em Mython
+use asyncio
+
+async task fetch_data(url):
+    say "Fetching " + url
+    await asyncio.sleep(1)
+    return "Data from " + url
+
+async task main():
+    set urls = ["url1", "url2", "url3"]
+    
+    for each url in urls:
+        set data = await fetch_data(url)
+        say data
+
+# Executar
+asyncio.run(main())
+

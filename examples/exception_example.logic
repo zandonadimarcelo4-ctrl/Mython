@@ -1,0 +1,23 @@
+# Exemplo: Tratamento de Exceções em Mython
+attempt:
+    set x = 10
+    set y = 0
+    set result = x / y
+    say "Result: " + str(result)
+catch ZeroDivisionError as error:
+    say "Error: Cannot divide by zero"
+    say "Details: " + str(error)
+finally:
+    say "This always runs"
+
+# Exemplo com raise
+define divide(a, b):
+    if b is 0:
+        raise ValueError("Division by zero not allowed")
+    return a / b
+
+attempt:
+    set result = divide(10, 0)
+catch ValueError as e:
+    say "Caught error: " + str(e)
+

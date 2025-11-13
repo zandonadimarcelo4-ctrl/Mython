@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml xmlns="https://developers.google.com/blockly/xml">
+  
+  <!-- Bloco: say -->
+  <block type="say">
+    <field name="TEXT">Hello, World!</field>
+  </block>
+  
+  <!-- Bloco: ask -->
+  <block type="ask">
+    <field name="VAR">name</field>
+    <value name="PROMPT">
+      <block type="text">
+        <field name="TEXT">What is your name?</field>
+      </block>
+    </value>
+  </block>
+  
+  <!-- Bloco: ask number -->
+  <block type="ask_number">
+    <field name="VAR">age</field>
+    <value name="PROMPT">
+      <block type="text">
+        <field name="TEXT">What is your age?</field>
+      </block>
+    </value>
+  </block>
+  
+  <!-- Bloco: if -->
+  <block type="controls_if">
+    <value name="IF0">
+      <block type="logic_compare">
+        <field name="OP">GT</field>
+        <value name="A">
+          <block type="variables_get">
+            <field name="VAR">age</field>
+          </block>
+        </value>
+        <value name="B">
+          <block type="math_number">
+            <field name="NUM">18</field>
+          </block>
+        </value>
+      </block>
+    </value>
+    <statement name="DO0">
+      <block type="say">
+        <field name="TEXT">Adult</field>
+      </block>
+    </statement>
+    <statement name="ELSE">
+      <block type="say">
+        <field name="TEXT">Minor</field>
+      </block>
+    </statement>
+  </block>
+  
+  <!-- Bloco: repeat -->
+  <block type="controls_repeat">
+    <value name="TIMES">
+      <block type="math_number">
+        <field name="NUM">5</field>
+      </block>
+    </value>
+    <statement name="DO">
+      <block type="say">
+        <field name="TEXT">Hello</field>
+      </block>
+    </statement>
+  </block>
+  
+  <!-- Bloco: for each -->
+  <block type="controls_forEach">
+    <field name="VAR">item</field>
+    <value name="LIST">
+      <block type="lists_create_with">
+        <mutation items="3"></mutation>
+        <value name="ADD0">
+          <block type="text">
+            <field name="TEXT">Alice</field>
+          </block>
+        </value>
+        <value name="ADD1">
+          <block type="text">
+            <field name="TEXT">Bob</field>
+          </block>
+        </value>
+        <value name="ADD2">
+          <block type="text">
+            <field name="TEXT">Charlie</field>
+          </block>
+        </value>
+      </block>
+    </value>
+    <statement name="DO">
+      <block type="say">
+        <value name="TEXT">
+          <block type="variables_get">
+            <field name="VAR">item</field>
+          </block>
+        </value>
+      </block>
+    </statement>
+  </block>
+  
+  <!-- Bloco: set variable -->
+  <block type="variables_set">
+    <field name="VAR">x</field>
+    <value name="VALUE">
+      <block type="math_number">
+        <field name="NUM">10</field>
+      </block>
+    </value>
+  </block>
+  
+  <!-- Bloco: add to list -->
+  <block type="lists_add">
+    <value name="ITEM">
+      <block type="text">
+        <field name="TEXT">new item</field>
+      </block>
+    </value>
+    <value name="LIST">
+      <block type="variables_get">
+        <field name="VAR">my_list</field>
+      </block>
+    </value>
+  </block>
+  
+</xml>
+

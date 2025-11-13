@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mython Blockly Workspace</title>
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="generator.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    #blocklyDiv {
+      height: 600px;
+      width: 800px;
+      border: 1px solid #ccc;
+    }
+    .controls {
+      margin: 20px 0;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #codeOutput {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      padding: 15px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      min-height: 200px;
+    }
+    .mode-selector {
+      margin: 20px 0;
+    }
+    .mode-selector label {
+      margin-right: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mython Blockly Workspace</h1>
+  
+  <div class="mode-selector">
+    <label>
+      <input type="radio" name="mode" value="blocks" checked> Modo Blocos
+    </label>
+    <label>
+      <input type="radio" name="mode" value="text"> Modo Texto (Mython)
+    </label>
+  </div>
+  
+  <div id="blocklyDiv"></div>
+  
+  <div class="controls">
+    <button onclick="generateMython()">Gerar Mython</button>
+    <button onclick="transpileToPython()">Transpilar para Python</button>
+    <button onclick="runCode()">Executar</button>
+    <button onclick="clearWorkspace()">Limpar</button>
+  </div>
+  
+  <h3>Código Gerado:</h3>
+  <div id="codeOutput">Arraste blocos para começar...</div>
+  
+  <script>
+    // Toolbox com blocos Mython
+    var toolbox = {
+      "kind": "categoryToolbox",
+      "contents": [
+        {
+          "kind": "category",
+          "name": "Básico",
+          "colour": "210",
+          "contents": [
+            {"kind": "block", "type": "say"},
+            {"kind": "block", "type": "ask"},
+            {"kind": "block", "type": "ask_number"},
+            {"kind": "block", "type": "variables_set"},
+            {"kind": "block", "type": "variables_get"}
+          ]
+        },
+        {
+          "kind": "category",
+          "name": "Controle",
+          "colour": "120",
+          "contents": [
+            {"kind": "block", "type": "controls_if"},
+            {"kind": "block", "type": "controls_repeat"},
+            {"kind": "block", "type": "controls_forEach"},
+            {"kind": "block", "type": "controls_whileUntil"}
+          ]
+        },
+        {
+          "kind": "category",
+          "name": "Listas",
+          "colour": "260",
+          "contents": [
+            {"kind": "block", "type": "lists_create_with"},
+            {"kind": "block", "type": "lists_add"}
+          ]
+        },
+        {
+          "kind": "category",
+          "name": "Lógica",
+          "colour": "210",
+          "contents": [
+            {"kind": "block", "type": "logic_compare"},
+            {"kind": "block", "type": "logic_operation"},
+            {"kind": "block", "type": "logic_negate"}
+          ]
+        },
+        {
+          "kind": "category",
+          "name": "Matemática",
+          "colour": "230",
+          "contents": [
+            {"kind": "block", "type": "math_number"},
+            {"kind": "block", "type": "math_arithmetic"}
+          ]
+        },
+        {
+          "kind": "category",
+          "name": "Texto",
+          "colour": "160",
+          "contents": [
+            {"kind": "block", "type": "text"},
+            {"kind": "block", "type": "text_join"}
+          ]
+        }
+      ]
+    };
+    
+    // Inicializar workspace
+    var workspace = Blockly.inject('blocklyDiv', {
+      toolbox: toolbox,
+      grid: {
+        spacing: 20,
+        length: 3,
+        colour: '#ccc',
+        snap: true
+      },
+      zoom: {
+        controls: true,
+        wheel: true,
+        startScale: 1.0,
+        maxScale: 3,
+        minScale: 0.3,
+        scaleSpeed: 1.2
+      },
+      trashcan: true
+    });
+    
+    // Gerar código Mython
+    function generateMython() {
+      var code = Blockly.Mython.workspaceToCode(workspace);
+      document.getElementById('codeOutput').textContent = code || 'Nenhum código gerado.';
+    }
+    
+    // Transpilar para Python (requer backend)
+    function transpileToPython() {
+      var mythonCode = Blockly.Mython.workspaceToCode(workspace);
+      if (!mythonCode) {
+        document.getElementById('codeOutput').textContent = 'Nenhum código para transpilar.';
+        return;
+      }
+      
+      // Aqui você faria uma chamada ao transpiler
+      // Por enquanto, apenas mostra o Mython
+      document.getElementById('codeOutput').textContent = 
+        'Mython:\n' + mythonCode + '\n\n' +
+        'Python (seria gerado pelo transpiler):\n' +
+        '[Transpilação requer backend]';
+    }
+    
+    // Executar código
+    function runCode() {
+      var mythonCode = Blockly.Mython.workspaceToCode(workspace);
+      if (!mythonCode) {
+        alert('Nenhum código para executar.');
+        return;
+      }
+      
+      // Salvar código Mython
+      var blob = new Blob([mythonCode], {type: 'text/plain'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'generated.logic';
+      a.click();
+      
+      alert('Código Mython salvo! Use: mython generated.logic --run');
+    }
+    
+    // Limpar workspace
+    function clearWorkspace() {
+      if (confirm('Limpar todo o workspace?')) {
+        workspace.clear();
+        document.getElementById('codeOutput').textContent = 'Workspace limpo.';
+      }
+    }
+    
+    // Atualizar código quando workspace mudar
+    workspace.addChangeListener(function(event) {
+      if (event.type != Blockly.Events.UI) {
+        generateMython();
+      }
+    });
+  </script>
+</body>
+</html>
+

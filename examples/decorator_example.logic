@@ -1,0 +1,23 @@
+# Exemplo: Decorators em Mython
+use time
+
+decorator timer:
+    task measure_time(func):
+        task wrapper(*args, **kwargs):
+            set start = time.time()
+            set result = func(*args, **kwargs)
+            set end = time.time()
+            say "Function took " + str(end - start) + " seconds"
+            return result
+        return wrapper
+
+@timer
+define slow_function(n):
+    set total = 0
+    repeat n times:
+        set total = total + 1
+    return total
+
+set result = slow_function(1000000)
+say "Result: " + str(result)
+
