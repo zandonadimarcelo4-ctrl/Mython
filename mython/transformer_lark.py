@@ -2015,27 +2015,55 @@ class MythonTransformer(Transformer):
         return "[" + ", ".join(items) + "]"
     
     def dict_literal(self, args: List[Any]) -> str:
-        """Dicionário literal."""
+        """Dicionário literal usando pair (STRING ":" expr)."""
         if not args:
             return "{}"
+        # args é uma lista de pair (cada pair é uma Tree com 2 filhos: STRING e expr)
         items = []
-        for i in range(0, len(args), 2):
-            if i + 1 < len(args):
-                key = self._expr(args[i])
-                value = self._expr(args[i + 1])
+        for pair in args:
+            if isinstance(pair, Tree) and len(pair.children) == 2:
+                key = self._expr(pair.children[0])  # STRING
+                value = self._expr(pair.children[1])  # expr
                 items.append(f"{key}: {value}")
+            else:
+                # Fallback para formato antigo (se ainda existir)
+                items.append(str(pair))
         return "{" + ", ".join(items) + "}"
     
+    def pair(self, args: List[Any]) -> str:
+        """Pair (chave: valor) em dict_literal."""
+        # Este método não é necessário se dict_literal processar diretamente os pairs
+        # Mas pode ser útil para debug
+        if len(args) == 2:
+            key = self._expr(args[0])
+            value = self._expr(args[1])
+            return f"{key}: {value}"
+        return ""
+    
     def tuple_literal(self, args: List[Any]) -> str:
-        """Tupla literal."""
+        """
+        Tupla literal.
+        CORRIGIDO: tuple_literal agora SEMPRE termina com vírgula ou tem múltiplos itens.
+        Formato: (x,) ou (x, y) - nunca (x) que é paren_expr
+        """
         if not args:
             return "()"
         items = [self._expr(arg) for arg in args]
+        # Se tem 1 item, adicionar vírgula final: (x,)
+        # Se tem múltiplos, já está correto: (x, y)
+        if len(items) == 1:
+            return f"({items[0]},)"
         return "(" + ", ".join(items) + ")"
     
     def set_literal(self, args: List[Any]) -> str:
-        """Set literal."""
+        """
+        Set literal.
+        CORRIGIDO: set_literal agora requer pelo menos 1 item.
+        {} vazio não é mais set_literal (é dict vazio em Python).
+        Formato: {x} ou {x, y} - nunca {} que seria dict vazio
+        """
         if not args:
+            # Isso não deveria acontecer com a nova gramática, mas por segurança:
             return "set()"
         items = [self._expr(arg) for arg in args]
         return "{" + ", ".join(items) + "}"

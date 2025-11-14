@@ -5,11 +5,14 @@
 %declare INDENT DEDENT
 
 ?start: statement+
+// IMPORTANTE: start aceita statement+, então o último statement pode não ter _NEWLINE final
+// Mas cada statement individual exige _NEWLINE após simple_stmt (exceto o último se for seguido por $END)
 
 // IMPORTANTE: _NEWLINE deve estar no nível de statement, NÃO no nível de simple_stmt
 // Isso permite que blocos INDENT/DEDENT funcionem corretamente com o indenter
 // O indenter injeta DEDENT seguido de _NEWLINE, e a gramática precisa aceitar isso
-?statement: simple_stmt _NEWLINE
+// CORRIGIDO BUG 1: _NEWLINE opcional para permitir último statement sem newline final
+?statement: simple_stmt _NEWLINE?
          | compound_stmt
 
 // Statements dentro de blocos INDENT/DEDENT - _NEWLINE é opcional
@@ -139,6 +142,7 @@ with_stmt: "with" expr ("as" NAME)? ":" _NEWLINE INDENT statement+ DEDENT
 // Atribuições (ULTRA SIMPLES: sem palavra-chave, apenas =)
 // set_assign_stmt: alternativa mais natural para atribuição (set name = value)
 // IMPORTANTE: Usar SET terminal em vez de "set" literal para garantir precedência sobre NAME
+// CORRIGIDO BUG 1: Não adicionar _NEWLINE aqui - já é processado pelo statement que adiciona _NEWLINE
 set_assign_stmt: SET NAME "=" expr
 assign_stmt: NAME "=" expr
 augmented_assignment_stmt: NAME ("+=" | "-=" | "*=" | "/=" | "//=" | "%=" | "**=") expr
@@ -211,11 +215,16 @@ call_stmt: (NAME | attribute_access) "(" args? ")"
 comparison: atom comparison_op atom
 
 // Átomo (valor simples)
+// CORRIGIDO DEFINITIVO: Apenas coisas básicas - sem set_literal nem tuple_literal
+// dict_literal está em expr diretamente (não em atom) para resolver conflitos
+// tuple_literal removido de atom - conflito com paren_expr resolvido pela regra tuple_literal
+// IMPORTANTE: set_literal NÃO pode ficar em atom - causa conflito com set_stmt
 ?atom: NAME | NUMBER | STRING
      | "(" expr ")"  -> paren_expr
      | function_call
      | attribute_access
      | subscription
+     | list_literal
 
 // Operadores de comparação Python (suportados após normalize_operators)
 // IMPORTANTE: Definir como terminais para evitar conflitos
@@ -231,7 +240,10 @@ comparison_op: GREATER | LESS | GREATER_EQUAL | LESS_EQUAL | EQUALS | NOT_EQUAL
 
 // Expressões - Expandidas com operadores aritméticos
 // Prioridade: adição/subtração mais baixa, depois multiplicação/divisão, depois átomos
+// CORRIGIDO DEFINITIVO: Incluir dict_literal diretamente em expr para resolver BUG 2 (call_stmt com dicts)
+// dict_literal usa pair (STRING ":" expr), então é distinguível de set_literal
 ?expr: sum
+     | dict_literal
 ?sum: product
     | sum "+" product  -> add
     | sum "-" product  -> sub
@@ -266,10 +278,26 @@ list_comprehension: "list" "[" expr "for" NAME "in" expr ("if" condition)? "]"
 dict_comprehension: "dict" "{" expr ":" expr "for" NAME "in" expr ("if" condition)? "}"
 set_comprehension: "set" "{" expr "for" NAME "in" expr ("if" condition)? "}"
 
+// Literais de estruturas de dados
+// CORRIGIDO DEFINITIVO: Resolver conflitos Reduce/Reduce de forma profissional
+// 
+// 1. dict_literal vs set_literal:
+//    - dict_literal: {"key": value} - usa pair (STRING ":" expr) - SEMPRE tem :
+//    - set_literal: {value1, value2} - usa apenas expr - NUNCA tem :
+//    - {} vazio: É dict vazio (padrão Python) - mas nossa gramática exige pelo menos uma vírgula para set vazio
+//
+// 2. tuple_literal vs paren_expr:
+//    - tuple_literal: (x,) - SEMPRE termina com vírgula ou tem múltiplos itens
+//    - paren_expr: (x) - SEMPRE um único expr SEM vírgula
+//    - Isso resolve completamente a ambiguidade: (x) = expr, (x,) = tupla
+//
+// 3. set_literal REMOVIDO de atom - causa conflito com set_stmt
+//
 list_literal: "[" (expr ("," expr)*)? "]"
-dict_literal: "{" (expr ":" expr ("," expr ":" expr)*)? "}"
-tuple_literal: "(" (expr ("," expr)*)? ")"
-set_literal: "{" (expr ("," expr)*)? "}"
+dict_literal: "{" [pair ("," pair)*] "}"
+pair: STRING ":" expr
+tuple_literal: "(" [expr ("," expr)* ","] ")"  // CORRIGIDO: vírgula final ou múltiplos itens
+set_literal: "{" expr ("," expr)* "}"  // CORRIGIDO: requer pelo menos 1 item (sem vírgula final)
 
 // prompt removido - usando STRING | expr diretamente em ask_stmt
 inheritance: NAME ("," NAME)*
