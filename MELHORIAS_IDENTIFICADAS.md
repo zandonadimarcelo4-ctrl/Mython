@@ -262,3 +262,12 @@ O diretório "Melhorar linguagem de programação simples e avançada" contém *
 **Última atualização:** 2025-01-27
 **Status:** Análise completa, pronto para implementação
 
+---
+
+## 📚 Documentos Relacionados
+
+- `PLANO_MELHORIAS_AVANCADAS.md` - Plano detalhado de melhorias avançadas (macros, i18n, ferramentas)
+- `RESPOSTA_ANALISE_MELHORIAS.md` - Resposta oficial à análise de melhorias
+- `ROADMAP_COMPLETO.md` - Roadmap completo do projeto Mython
+- `STATUS_IMPLEMENTACAO.md` - Status atual de implementação
+
