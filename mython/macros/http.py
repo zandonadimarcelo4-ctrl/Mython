@@ -58,7 +58,7 @@ class HTTPMacros(MacroBase):
         else:
             raise MacroError(f"Padrão desconhecido: {pattern_name}")
     
-    def _extract_args(self, args: List[Any]) -> Dict[str, Any]:
+    def _extract_args(self, args: List[Any], transformer=None) -> Dict[str, Any]:
         """
         Extrai argumentos comuns dos tokens.
         """
@@ -80,19 +80,18 @@ class HTTPMacros(MacroBase):
                     result["type"] = arg.value
             elif isinstance(arg, Tree):
                 if arg.data == "dict_literal":
-                    # Processar dict_literal
-                    result["data"] = self._process_dict_literal(arg)
+                    result["data"] = self._process_dict_literal(arg, transformer)
                 elif arg.data == "expr":
-                    # Processar expressão
-                    result["data"] = self._process_expr(arg)
-        
+                    result["data"] = self._process_expr(arg, transformer)
+
         return result
-    
-    def _process_dict_literal(self, tree: Tree) -> str:
+
+    def _process_dict_literal(self, tree: Tree, transformer=None) -> str:
         """
         Processa dict_literal em string Python.
         """
-        # Implementação simplificada - na prática, usar o transformer
+        if transformer:
+            return transformer.dict_literal(tree.children)
         pairs = []
         for child in tree.children:
             if isinstance(child, Tree) and child.data == "pair":
@@ -100,12 +99,13 @@ class HTTPMacros(MacroBase):
                 value = str(child.children[1])
                 pairs.append(f"{key}: {value}")
         return "{" + ", ".join(pairs) + "}"
-    
-    def _process_expr(self, tree: Tree) -> str:
+
+    def _process_expr(self, tree: Tree, transformer=None) -> str:
         """
         Processa expressão em string Python.
         """
-        # Implementação simplificada - na prática, usar o transformer
+        if transformer:
+            return transformer._expr(tree)
         return str(tree.children[0]) if tree.children else ""
     
     def _expand_get_data(self, args: List[Any], transformer=None) -> str:

@@ -3,7 +3,7 @@ Transformer para converter AST do Lark em código Python.
 """
 
 from lark import Transformer, Token, Tree
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Set
 
 # Importar sistema de macros modular
 try:
@@ -24,6 +24,7 @@ class MythonTransformer(Transformer):
         self.indent_level = 0
         self.in_class = False
         self.source_code = source_code  # Armazenar código original para extrair tokens
+        self.extra_imports: Set[str] = set()
         self.needs_imports = {
             'time': False,
             'random': False,
@@ -64,7 +65,12 @@ class MythonTransformer(Transformer):
             imports.append("import datetime")
         if self.needs_imports['sys']:
             imports.append("import sys")
-        
+
+        if self.extra_imports:
+            for extra_import in sorted(self.extra_imports):
+                if extra_import not in imports:
+                    imports.append(extra_import)
+
         if imports:
             lines.extend(imports)
             lines.append("")
@@ -118,6 +124,10 @@ class MythonTransformer(Transformer):
                         result,
                         transformer=self  # Passar transformer para processar expressões
                     )
+                    imports = macro_registry.get_imports_for_rule(result.data)
+                    if imports:
+                        for extra_import in imports:
+                            self.extra_imports.add(extra_import)
                     return macro_code
                 except Exception as e:
                     # Se falhar, retornar erro ou código Python de fallback

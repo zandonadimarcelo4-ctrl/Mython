@@ -177,3 +177,12 @@ class MacroRegistry:
                 imports.update(pattern_imports)
         return sorted(list(imports))
 
+    def get_imports_for_rule(self, rule_name: str) -> List[str]:
+        """Retorna apenas os imports necessários para a regra informada."""
+        result = self.find_macro(rule_name)
+        if not result:
+            return []
+        macro, pattern_name = result
+        imports = macro.get_required_imports(pattern_name)
+        return imports if imports else []
+
