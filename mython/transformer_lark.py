@@ -182,42 +182,29 @@ class MythonTransformer(Transformer):
         
         return "\n".join(indented_lines)
     
-    def compound_stmt(self, args: List[Any]) -> str:
-        """Statement composto - transforma recursivamente."""
-        if not args:
+    def compound_stmt(self, children: List[Any]) -> str:
+        """
+        compound_stmt: async_function_def | function_def | if_stmt | while_stmt | ...
+        
+        CORRIGIDO: Apenas retorna o resultado do filho já transformado.
+        NÃO chama self.transform() - o Lark já transformou o filho.
+        """
+        if not children:
             return ""
-        # args[0] é o compound statement (if_stmt, while_stmt, etc.)
-        result = args[0]
         
-        # Se é Tree, transformar recursivamente
+        # O primeiro child já foi transformado pelo Lark em string
+        result = children[0]
+        
+        # Se ainda é Tree (não deveria acontecer), converter para string
         if isinstance(result, Tree):
-            transformed = self.transform(result)
-            if transformed:
-                result = transformed
+            return str(result)
         
-        # Garantir que é string
-        if not isinstance(result, str):
-            result = str(result)
+        # Se é string, retornar diretamente
+        if isinstance(result, str):
+            return result
         
-        # Se parece ser uma representação de Tree, tentar extrair o conteúdo
-        if isinstance(result, str) and result.startswith("Tree("):
-            # Isso significa que o transform falhou - tentar transformar children diretamente
-            if hasattr(args[0], 'children') and args[0].children:
-                # Transformar cada filho
-                transformed_children = []
-                for child in args[0].children:
-                    if isinstance(child, Tree):
-                        transformed = self.transform(child)
-                        if transformed and isinstance(transformed, str):
-                            transformed_children.append(transformed)
-                    elif isinstance(child, str):
-                        transformed_children.append(child)
-                
-                if transformed_children:
-                    # Juntar children transformados
-                    result = "\n".join(str(c) for c in transformed_children if c and str(c).strip())
-        
-        return result
+        # Fallback: converter para string
+        return str(result) if result else ""
     
     def INDENT(self, token):
         """Token INDENT - incrementa nível de indentação."""
@@ -739,49 +726,72 @@ class MythonTransformer(Transformer):
         """
         return self.indent() + "continue"
     
-    def elif_stmt(self, args: List[Any]) -> str:
-        """elif/else if/or if - Com INDENT/DEDENT, os blocos já vêm estruturados corretamente."""
-        if not args or len(args) < 1:
+    def elif_stmt(self, children: List[Any]) -> str:
+        """
+        elif_stmt: ELSE IF condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
+        
+        CORRIGIDO: Processa condition e block_stmt+ já transformados.
+        NÃO chama self.transform() - o Lark já transformou os filhos.
+        """
+        if not children:
             return ""
         
-        # Processar condição
-        cond_tree = args[0]
-        if hasattr(cond_tree, 'children') and cond_tree.children:
-            try:
-                condition = self.transform(cond_tree)
-                if not isinstance(condition, str):
-                    condition = self._expr(cond_tree)
-            except:
-                condition = self._expr(cond_tree)
-        else:
-            condition = self._expr(cond_tree)
+        # Filtrar tokens ELSE, IF, _NEWLINE, ":", INDENT, DEDENT
+        # Manter apenas: condition (string), block_stmt+ (strings), else_block? (string)
+        condition = ""
+        blocks = []
+        else_part = ""
         
-        # Processar statements do bloco (pular _NEWLINE, INDENT e DEDENT)
-        statements = []
-        for arg in args[1:]:
+        i = 0
+        while i < len(children):
+            arg = children[i]
+            
             # Ignorar tokens de controle
-            if isinstance(arg, str):
-                if arg.strip() in ['INDENT', 'DEDENT', '_NEWLINE']:
+            if isinstance(arg, Token):
+                if arg.type in ['ELSE', 'IF', '_NEWLINE', 'INDENT', 'DEDENT']:
+                    i += 1
                     continue
-            # Verificar se é um Token
-            if hasattr(arg, 'type'):
-                if arg.type in ['INDENT', 'DEDENT', '_NEWLINE']:
-                    if arg.type == 'INDENT':
-                        self.indent_level += 1
-                    elif arg.type == 'DEDENT':
-                        self.indent_level -= 1
+                if arg.value == ':':
+                    i += 1
                     continue
-            statements.append(arg)
+            
+            # Primeiro não-token é a condition
+            if not condition:
+                condition = self._expr(arg) if hasattr(arg, 'children') else str(arg)
+                i += 1
+                continue
+            
+            # Depois vem block_stmt+ (strings já transformadas)
+            # Até encontrar else_block
+            if isinstance(arg, Tree) and arg.data == 'else_block':
+                else_part = str(arg)
+                i += 1
+                continue
+            
+            # Se é string, é um block_stmt já transformado
+            if isinstance(arg, str) and arg.strip():
+                blocks.append(arg)
+            elif isinstance(arg, Tree):
+                blocks.append(str(arg))
+            
+            i += 1
         
-        # Construir o bloco
-        block = self.block(statements) if statements else ""
+        # Construir bloco elif
+        if blocks:
+            block_code = "\n".join(blocks)
+        else:
+            block_code = "    pass"
         
         # Construir resultado
-        result = self.indent() + f"elif {condition}:"
-        if block:
-            result += "\n" + block
+        code = f"elif {condition}:"
+        if block_code:
+            code += "\n" + block_code
         
-        return result
+        # Adicionar else_block se existir
+        if else_part:
+            code += "\n" + else_part
+        
+        return code
     
     def else_stmt(self, args: List[Any]) -> str:
         """else/otherwise - Com INDENT/DEDENT, os blocos já vêm estruturados corretamente."""
@@ -881,25 +891,21 @@ class MythonTransformer(Transformer):
         
         return f"{left} {op} {right}"
     
-    def comparison_op(self, args: List[Any]) -> str:
+    def comparison_op(self, children: List[Any]) -> str:
         """
         comparison_op: GREATER | LESS | GREATER_EQUAL | LESS_EQUAL | EQUALS | NOT_EQUAL
         
-        args[0] = Token(GREATER, '>') ou Token(LESS, '<'), etc.
+        CORRIGIDO: Retorna o valor do token diretamente.
         """
-        if not args:
+        if not children:
             return ""
         
         # Se é Token, retornar valor diretamente
-        if isinstance(args[0], Token):
-            return args[0].value
-        
-        # Se é Tree, transformar recursivamente
-        if isinstance(args[0], Tree):
-            return self.transform(args[0])
+        if isinstance(children[0], Token):
+            return children[0].value
         
         # Se é string, retornar diretamente
-        return str(args[0])
+        return str(children[0])
     
     def condition(self, args: List[Any]) -> str:
         """
@@ -1023,10 +1029,6 @@ class MythonTransformer(Transformer):
         value = self._expr(args[0])
         list_name = args[1].value if isinstance(args[1], Token) else str(args[1])
         return self.indent() + f"{list_name}.remove({value})"
-    
-    # ============================================
-    # Funções
-    # ============================================
     
     # ============================================
     # Funções
@@ -1197,41 +1199,25 @@ class MythonTransformer(Transformer):
         CORRIGIDO: Processa NAME e expr já transformados.
         NÃO chama self.transform() - o Lark já transformou os filhos.
         """
-        if not children or len(children) < 2:
+        # children: [NAME, "=", expr]
+        if len(children) < 3:
             return ""
         
-        # Filtrar tokens "="
+        # Filtrar token "="
         filtered = [c for c in children if not (isinstance(c, Token) and c.value == '=')]
         
         if len(filtered) < 2:
             return ""
         
-        # Primeiro é NAME, segundo é expr (já transformado)
-        var_name = None
-        expr_value = None
+        # Primeiro é NAME, segundo é expr
+        var = filtered[0]
+        value = filtered[1]
         
-        # Primeiro arg é NAME
-        name_arg = filtered[0]
-        if isinstance(name_arg, Token) and name_arg.type == 'NAME':
-            var_name = name_arg.value
-        elif isinstance(name_arg, str):
-            var_name = name_arg
-        else:
-            var_name = str(name_arg)
+        # Converter NAME
+        var_name = var.value if isinstance(var, Token) else str(var)
         
-        # Segundo arg é expr (já transformado)
-        expr_arg = filtered[1]
-        if isinstance(expr_arg, Token):
-            expr_value = self._expr(expr_arg)
-        else:
-            # Se já é string, usar diretamente
-            expr_value = str(expr_arg)
-        
-        # Valor padrão
-        if not var_name:
-            var_name = "value"
-        if not expr_value:
-            expr_value = ""
+        # Converter expr
+        expr_value = self._expr(value) if not isinstance(value, str) else str(value)
         
         # Retornar com indentação atual
         return self.indent() + f"{var_name} = {expr_value}"
@@ -1768,14 +1754,48 @@ class MythonTransformer(Transformer):
             return str(expr)
     
     
+    def params(self, children: List[Any]) -> str:
+        """
+        params: NAME ("," NAME)*
+        
+        CORRIGIDO: Processa lista de NAME tokens e retorna string separada por vírgulas.
+        """
+        if not children:
+            return ""
+        
+        # Filtrar vírgulas
+        filtered = [c for c in children if not (isinstance(c, Token) and c.value == ',')]
+        
+        # Extrair nomes de parâmetros
+        param_names = []
+        for arg in filtered:
+            if isinstance(arg, Token) and arg.type == 'NAME':
+                param_names.append(arg.value)
+            elif isinstance(arg, str):
+                param_names.append(arg)
+        
+        return ", ".join(param_names)
+    
     def _params(self, params: Any) -> str:
-        """Converte parâmetros para string."""
+        """
+        Método auxiliar para compatibilidade.
+        Chama params() se params for uma lista/tree.
+        """
         if not params:
             return ""
         if isinstance(params, Token):
             return params.value
         if isinstance(params, list):
             return ", ".join(p.value if isinstance(p, Token) else str(p) for p in params)
+        # Se é Tree, processar children
+        if hasattr(params, 'children'):
+            param_names = []
+            for child in params.children:
+                if isinstance(child, Token) and child.type == 'NAME':
+                    param_names.append(child.value)
+                elif isinstance(child, str):
+                    param_names.append(child)
+            return ", ".join(param_names)
         return str(params)
     
     def _args(self, args: Any) -> str:
