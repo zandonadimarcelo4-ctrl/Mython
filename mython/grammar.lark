@@ -245,6 +245,8 @@ function_call: atom "(" args? ")"
 
 // Argumentos de função
 args: expr ("," expr)*
+     | (NAME "=" expr) ("," (NAME "=" expr))*  // kwargs (argumentos nomeados)
+     | expr ("," (NAME "=" expr))+
      | args_varargs ("," expr)*
      | expr ("," args_varargs)?
      | args_varargs ("," kwargs_varargs)?
