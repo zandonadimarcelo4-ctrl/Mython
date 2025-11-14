@@ -167,18 +167,19 @@ with st.sidebar:
         "Selecione um exemplo...",
         "Hello World",
         "Verificar Idade",
+        "Verificar Idade (Português) 🌍",
         "Lista de Nomes",
         "Função Soma",
-        "Classe Person",
-        "Loop com Condição"
+        "Loop com Condição",
+        "Operadores Naturais"
     ]
     
     # Adicionar exemplos em outras línguas se i18n estiver disponível
     if I18N_AVAILABLE:
         example_options.extend([
-            "Hello World (PT)",
-            "Hello World (ES)",
-            "Verificar Idade (PT)"
+            "Hello World (PT) 🌍",
+            "Hello World (ES) 🌍",
+            "Tradução Automática Demo 🌍"
         ])
     
     example_code = st.selectbox(
@@ -197,68 +198,117 @@ with st.sidebar:
 # Exemplos de código
 examples = {
     "Hello World": '''say "Hello, World!"
+
 say "Welcome to Mython IDE!"''',
     
     "Verificar Idade": '''ask number age "Enter your age: "
-if age is over 18:
+
+if age > 18:
+
     say "You are an adult"
+
 else:
+
     say "You are a minor"''',
     
-    "Lista de Nomes": '''list names = ["Alice", "Bob", "Charlie"]
-say "Names:"
-for each name in names:
-    say name
+    "Verificar Idade (Português) 🌍": '''# Este código será traduzido automaticamente para inglês!
+perguntar numero idade "Digite sua idade: "
+
+se idade > 18:
+
+    dizer "Você é adulto"
+
+senão:
+
+    dizer "Você é menor"''',
     
-add "David" to names
-say "After adding David:"
+    "Lista de Nomes": '''list names = ["Alice", "Bob", "Charlie"]
+
+say "Names:"
+
 for each name in names:
+
+    say name
+
+add "David" to names
+
+say "After adding David:"
+
+for each name in names:
+
     say name''',
     
     "Função Soma": '''define add(a, b):
+
     set result = a + b
+
     return result
 
 set sum1 = add(5, 3)
+
 set sum2 = add(10, 20)
+
 say "5 + 3 = " + str(sum1)
+
 say "10 + 20 = " + str(sum2)''',
     
-    "Classe Person": '''class Person:
-    init(name, age):
-        set self.name = name
-        set self.age = age
-    
-    task greet():
-        say "Hello, I am " + self.name
-        say "I am " + str(self.age) + " years old"
-    
-    task have_birthday():
-        set self.age = self.age + 1
-        say "Happy birthday! Now I am " + str(self.age)
-
-set person = Person("Alice", 25)
-person.greet()
-person.have_birthday()''',
-    
     "Loop com Condição": '''set count = 0
-while count is under 5:
+
+while count < 5:
+
     say "Count: " + str(count)
+
     set count = count + 1
+
 say "Done!"''',
     
+    "Operadores Naturais": '''# Demonstração de operadores naturais
+ask number age "Enter your age: "
+
+# Forma natural (normalizada automaticamente):
+if age is over 18:
+
+    say "Adult (using 'is over')"
+
+# Forma Python direta (também funciona):
+if age > 18:
+
+    say "Adult (using '>')"
+
+if age is at least 18:
+
+    say "At least 18"
+
+if age is under 13:
+
+    say "Child"''',
+    
     # Exemplos em outras línguas
-    "Hello World (PT)": '''dizer "Olá, Mundo!"
+    "Hello World (PT) 🌍": '''# Tradução automática para inglês!
+dizer "Olá, Mundo!"
+
 dizer "Bem-vindo ao Mython IDE!"''',
     
-    "Hello World (ES)": '''decir "¡Hola, Mundo!"
+    "Hello World (ES) 🌍": '''# Tradução automática para inglês!
+decir "¡Hola, Mundo!"
+
 decir "¡Bienvenido al Mython IDE!"''',
     
-    "Verificar Idade (PT)": '''perguntar número idade "Digite sua idade: "
-se idade é maior que 18:
+    "Tradução Automática Demo 🌍": '''# Demonstração de tradução automática
+# Você pode escrever em qualquer idioma!
+
+# Português:
+perguntar numero idade "Digite sua idade: "
+
+se idade > 18:
+
     dizer "Você é adulto"
+
 senão:
-    dizer "Você é menor"'''
+
+    dizer "Você é menor"
+
+# O sistema detecta e traduz automaticamente para inglês!'''
 }
 
 # Carregar exemplo se selecionado (movido para depois da inicialização)

@@ -1,8 +1,13 @@
-# Exemplo: verificar idade
-ask number age "Digite sua idade: "
+# Exemplo: verificar idade com tradução automática
+# Este código pode ser escrito em qualquer idioma!
+# O Mython traduz automaticamente para inglês antes de executar
 
-if age is over 17:
-    say "Você é maior de idade"
+ask number age "Enter your age: "
+
+if age > 18:
+
+    say "You are an adult"
+
 else:
-    say "Você é menor de idade"
 
+    say "You are a minor"

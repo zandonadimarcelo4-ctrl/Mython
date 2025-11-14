@@ -397,11 +397,23 @@ def transpile_file(input_path: str, output_path: str = None, lang: str = None) -
     # PRIORIDADE: Sistema híbrido (LibreTranslate + Argos Translate)
     # FALLBACK: Sistema i18n tradicional (dicionários)
     
-    if lang != "en":
+    # Se lang não foi especificado, tentar detectar automaticamente
+    if lang is None:
+        if I18N_AVAILABLE and detect_language:
+            try:
+                detected_lang = detect_language(code)
+                if detected_lang and detected_lang != "en":
+                    lang = detected_lang
+            except Exception as e:
+                import warnings
+                warnings.warn(f"Não foi possível detectar idioma automaticamente: {e}")
+    
+    # Traduzir para inglês se necessário (inglês é a base do Mython)
+    if lang and lang != "en":
         # Tentar sistema híbrido primeiro (mais robusto)
         if HYBRID_TRANSLATOR_AVAILABLE and translate_keywords:
             try:
-                code = translate_keywords(code, use_cache=True)
+                code = translate_keywords(code, source_lang=lang, target_lang="en", use_cache=True)
                 # Se traduziu com sucesso, assumir que funcionou
             except Exception as e:
                 # Se falhar, tentar sistema i18n tradicional
@@ -421,13 +433,33 @@ def transpile_file(input_path: str, output_path: str = None, lang: str = None) -
             except Exception as e:
                 import warnings
                 warnings.warn(f"Não foi possível traduzir código de {lang} para inglês: {e}")
+    # Se lang ainda é None mas i18n está disponível, tentar detecção e tradução automática
+    elif lang is None and I18N_AVAILABLE and detect_language:
+        try:
+            detected_lang = detect_language(code)
+            if detected_lang and detected_lang != "en":
+                # Tentar sistema híbrido primeiro
+                if HYBRID_TRANSLATOR_AVAILABLE and translate_keywords:
+                    try:
+                        code = translate_keywords(code, source_lang=detected_lang, target_lang="en", use_cache=True)
+                    except Exception:
+                        # Fallback para i18n tradicional
+                        code = translate_code(code, lang=detected_lang, reverse=True)
+                else:
+                    code = translate_code(code, lang=detected_lang, reverse=True)
+        except Exception as e:
+            import warnings
+            warnings.warn(f"Tradução automática falhou: {e}")
     
     # Normalizar operadores ANTES do parsing (simplifica o transformer)
     code = normalize_operators(code)
     
-    # Preprocessar indentação para garantir que blocos sejam reconhecidos corretamente
-    # O Lark não processa indentação automaticamente, então precisamos fazer isso manualmente
-    code = preprocess_indentation(code)
+    # Garantir que o código termine com newline (necessário para o parser)
+    if code and not code.endswith('\n'):
+        code = code + '\n'
+    
+    # NÃO precisamos mais pré-processar indentação - o Indenter faz isso automaticamente!
+    # code = preprocess_indentation(code)  # REMOVIDO - não é mais necessário
     
     # Parsear
     try:
@@ -505,37 +537,44 @@ def transpile_string(code: str, lang: str = None, use_hybrid_translator: bool = 
     )
     
     # Detectar língua automaticamente se necessário
+    # IMPORTANTE: Sempre detectar se lang é None para garantir tradução automática
     if lang is None:
         if I18N_AVAILABLE and detect_language:
             try:
-                lang = detect_language(code)
-            except:
-                lang = "en"
+                detected_lang = detect_language(code)
+                if detected_lang and detected_lang != "en":
+                    lang = detected_lang
+                else:
+                    lang = "en"  # Default para inglês se não detectar ou já for inglês
+            except Exception as e:
+                import warnings
+                warnings.warn(f"Não foi possível detectar idioma automaticamente: {e}")
+                lang = "en"  # Default para inglês em caso de erro
         else:
-            lang = "en"
+            lang = "en"  # Default para inglês se i18n não estiver disponível
     
     # Traduzir código para inglês se necessário (antes de parsear)
     # PRIORIDADE: Sistema híbrido (LibreTranslate + Argos Translate)
     # FALLBACK: Sistema i18n tradicional (dicionários)
-    
-    if lang != "en":
+    # IMPORTANTE: Inglês é a base do Mython - sempre traduzir para inglês se necessário
+    if lang and lang != "en":
         # Tentar sistema híbrido primeiro (mais robusto)
         if use_hybrid_translator and HYBRID_TRANSLATOR_AVAILABLE and translate_keywords:
             try:
-                code = translate_keywords(code, use_cache=True)
+                code = translate_keywords(code, source_lang=lang, target_lang="en", use_cache=True)
                 # Se traduziu com sucesso, assumir que funcionou
             except Exception as e:
                 # Se falhar, tentar sistema i18n tradicional
                 if I18N_AVAILABLE:
                     try:
                         code = translate_code(code, lang=lang, reverse=True)
-                    except:
+                    except Exception:
                         pass  # Continuar com código original se falhar
         # Fallback para sistema i18n tradicional
         elif I18N_AVAILABLE:
             try:
                 code = translate_code(code, lang=lang, reverse=True)
-            except:
+            except Exception:
                 pass  # Continuar com código original se falhar
     
     # Normalizar operadores ANTES do parsing (simplifica o transformer)

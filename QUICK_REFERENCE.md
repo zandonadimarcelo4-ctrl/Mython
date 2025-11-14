@@ -1,21 +1,58 @@
 # Mython - Referência Rápida
 
+## 🌍 Tradução Automática
+
+**IMPORTANTE:** O Mython traduz automaticamente qualquer código para inglês antes de executar!
+
+Você pode escrever em **qualquer idioma**:
+- 🇧🇷 Português: `perguntar`, `dizer`, `se`, `senão`
+- 🇪🇸 Espanhol: `preguntar`, `decir`, `si`, `sino`
+- 🇺🇸 Inglês: `ask`, `say`, `if`, `else`
+
+O sistema detecta o idioma e traduz automaticamente!
+
+---
+
 ## 🟩 Camada A2 - Básica
 
 ### Entrada/Saída
 ```logic
-say "Hello"              # print("Hello")
-ask name "Name? "        # name = input("Name? ")
-ask number age "Age? "   # age = int(input("Age? "))
+say "Hello"                      # print("Hello")
+ask name "Name? "                # name = input("Name? ")
+ask number age "Age? "           # age = int(input("Age? "))
+# Também funciona:
+ask number age                   # age = int(input())
+```
+
+**Tradução Automática:**
+```logic
+# Português (traduzido automaticamente):
+perguntar numero idade "Digite sua idade: "  # ask number age "Enter your age: "
+dizer "Olá"                                   # say "Hello"
 ```
 
 ### Condições
 ```logic
-if age is over 18:       # if age > 18:
+# Forma natural (traduzida automaticamente):
+if age is over 18:       # Normaliza para: if age > 18:
+    say "adult"
+else:
+    say "minor"
+
+# Forma Python direta (também funciona):
+if age > 18:
     say "adult"
 else:
     say "minor"
 ```
+
+**Operadores Suportados:**
+- `is over` / `is greater than` → `>`
+- `is under` / `is less than` → `<`
+- `is at least` → `>=`
+- `is at most` → `<=`
+- `equals` / `is equal to` → `==`
+- `is not` → `!=`
 
 ### Loops
 ```logic

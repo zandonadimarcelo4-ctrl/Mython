@@ -59,21 +59,35 @@ Mython possui **3 etapas internas**:
 Exemplo:
 
 ```logic
-ask number age "your age"
+ask number age "Enter your age: "
 
-if age is over 17:
-    say "adult"
+if age > 18:
+
+    say "You are an adult"
+
 else:
-    say "minor"
+
+    say "You are a minor"
 ```
 
 Esse é o código Mython.
 
-Você está literalmente escrevendo:
-- pergunte a idade
-- se idade for maior que 17
-- fale "adulto"
-- senão fale "menor"
+**Você também pode escrever em qualquer idioma!** O Mython traduz automaticamente:
+
+```logic
+# Em Português (traduzido automaticamente):
+perguntar numero idade "Digite sua idade: "
+
+se idade > 18:
+
+    dizer "Você é adulto"
+
+senão:
+
+    dizer "Você é menor"
+```
+
+O sistema detecta o idioma e traduz para inglês automaticamente antes de executar!
 
 **Não há:**
 - ❌ parênteses
@@ -88,12 +102,12 @@ Você está literalmente escrevendo:
 Mython transforma o código acima em:
 
 ```python
-age = int(input("your age"))
+age = int(input("Enter your age: "))
 
-if age > 17:
-    print("adult")
+if age > 18:
+    print("You are an adult")
 else:
-    print("minor")
+    print("You are a minor")
 ```
 
 Ou seja: interpreta frases naturais e as transforma em comandos Python reais.

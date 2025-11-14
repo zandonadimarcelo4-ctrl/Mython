@@ -2,44 +2,56 @@
 // Baseada em inglês A2/B1 - Linguagem Natural
 // Usa indentação estilo Python com INDENT/DEDENT
 
-%declare INDENT DEDENT _NEWLINE
+%declare INDENT DEDENT
 
 ?start: statement+
 
-?statement: simple_stmt
+// IMPORTANTE: _NEWLINE deve estar no nível de statement, NÃO no nível de simple_stmt
+// Isso permite que blocos INDENT/DEDENT funcionem corretamente com o indenter
+// O indenter injeta DEDENT seguido de _NEWLINE, e a gramática precisa aceitar isso
+?statement: simple_stmt _NEWLINE
          | compound_stmt
 
-// Statements simples (não abrem blocos) - terminam com _NEWLINE
+// Statements dentro de blocos INDENT/DEDENT - _NEWLINE é opcional
+// IMPORTANTE: Esta regra é usada dentro de blocos (if, while, for, etc.)
+// O último statement pode ser seguido diretamente por DEDENT, sem _NEWLINE
+// Por isso statements dentro de blocos têm _NEWLINE opcional
+?block_stmt: simple_stmt _NEWLINE?
+           | compound_stmt
+
+// Statements simples (não abrem blocos) - NÃO terminam com _NEWLINE aqui
 // ULTRA SIMPLES: apenas o essencial
-simple_stmt: say_stmt _NEWLINE
-           | ask_stmt _NEWLINE
-           | assign_stmt _NEWLINE
-           | augmented_assignment_stmt _NEWLINE
-           | return_stmt _NEWLINE
-           | break_stmt _NEWLINE
-           | continue_stmt _NEWLINE
-           | pass_stmt _NEWLINE
-           | yield_stmt _NEWLINE
-           | await_stmt _NEWLINE
-           | raise_stmt _NEWLINE
-           | assert_stmt _NEWLINE
-           | wait_stmt _NEWLINE
-           | random_stmt _NEWLINE
-           | use_stmt _NEWLINE
-           | from_import_stmt _NEWLINE
-           | list_stmt _NEWLINE
-           | dict_stmt _NEWLINE
-           | tuple_stmt _NEWLINE
-           | set_stmt _NEWLINE
-           | add_to_list_stmt _NEWLINE
-           | remove_from_list_stmt _NEWLINE
-           | slice_stmt _NEWLINE
-           | walrus_stmt _NEWLINE
-           | type_hint_stmt _NEWLINE
-           | lambda_stmt _NEWLINE
-           | save_file_stmt _NEWLINE
-           | read_file_stmt _NEWLINE
-           | python_escape _NEWLINE
+// IMPORTANTE: Ordem importa - mais específicos primeiro (say antes de python_escape)
+// IMPORTANTE: _NEWLINE foi movido para o nível de statement para permitir blocos INDENT/DEDENT
+simple_stmt: say_stmt
+           | ask_stmt
+           | assign_stmt
+           | augmented_assignment_stmt
+           | return_stmt
+           | break_stmt
+           | continue_stmt
+           | pass_stmt
+           | yield_stmt
+           | await_stmt
+           | raise_stmt
+           | assert_stmt
+           | wait_stmt
+           | random_stmt
+           | use_stmt
+           | from_import_stmt
+           | list_stmt
+           | dict_stmt
+           | tuple_stmt
+           | set_stmt
+           | add_to_list_stmt
+           | remove_from_list_stmt
+           | slice_stmt
+           | walrus_stmt
+           | type_hint_stmt
+           | lambda_stmt
+           | save_file_stmt
+           | read_file_stmt
+           // python_escape  // TEMPORARIAMENTE DESABILITADO PARA DEBUG
 
 // Statements compostos (abrem blocos indentados) - não terminam com _NEWLINE
 // IMPORTANTE: Ordem importa - mais específicos primeiro para evitar ambiguidades
@@ -48,8 +60,6 @@ compound_stmt: async_function_def
              | function_def
              | class_def
              | if_stmt
-             | elif_stmt
-             | else_stmt
              | while_stmt
              | for_each_stmt
              | repeat_stmt
@@ -65,39 +75,51 @@ compound_stmt: async_function_def
 say_stmt: "say" expr
 
 // Entrada (ULTRA SIMPLES: apenas "ask" + opcional "number")
-// ask name = input() ou ask name number = int(input())
-ask_stmt: "ask" NAME "number" STRING?
+// ask name = input() ou ask number name = int(input())
+// IMPORTANTE: Ordem importa - mais específicos primeiro (ask number NAME antes de ask NAME)
+// IMPORTANTE: "number" deve ser um literal "number" para ser reconhecido pelo parser
+ask_stmt: "ask" "number" NAME STRING?
+        | "ask" "number" NAME
+        | "ask" NAME "number" STRING?
         | "ask" NAME "number"
         | "ask" NAME STRING?
         | "ask" NAME
 
 // Condições (ULTRA SIMPLES: apenas "if" e "else")
-if_stmt: "if" condition ":" _NEWLINE INDENT statement+ DEDENT
-elif_stmt: "else" "if" condition ":" _NEWLINE INDENT statement+ DEDENT
-else_stmt: "else" ":" _NEWLINE INDENT statement+ DEDENT
+// IMPORTANTE: else_block NÃO é um statement separado - é parte do if_stmt
+// O else vem DEPOIS do DEDENT do bloco if, mas ainda dentro da regra if_stmt
+// O indenter SEMPRE injeta _NEWLINE após DEDENT, então o else_block precisa aceitar _NEWLINE* antes do "else"
+// IMPORTANTE: Dentro de blocos INDENT/DEDENT, usar block_stmt em vez de statement
+if_stmt: "if" condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
+elif_stmt: "else" "if" condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
+else_block: _NEWLINE* "else" ":" _NEWLINE INDENT block_stmt+ DEDENT
 
 // Loops (ULTRA SIMPLES: apenas "for", "while", "repeat")
-while_stmt: "while" condition ":" _NEWLINE INDENT statement+ DEDENT
-for_each_stmt: "for" NAME "in" expr ":" _NEWLINE INDENT statement+ DEDENT
-repeat_stmt: "repeat" NUMBER ":" _NEWLINE INDENT statement+ DEDENT
+// IMPORTANTE: Dentro de blocos INDENT/DEDENT, usar block_stmt em vez de statement
+while_stmt: "while" condition ":" _NEWLINE INDENT block_stmt+ DEDENT
+for_each_stmt: "for" NAME "in" expr ":" _NEWLINE INDENT block_stmt+ DEDENT
+repeat_stmt: "repeat" NUMBER ":" _NEWLINE INDENT block_stmt+ DEDENT
 
 // Funções (ULTRA SIMPLES: apenas "def")
-async_function_def: "async" "def" NAME "(" params? ")" ":" _NEWLINE INDENT statement+ DEDENT
-function_def: "def" NAME "(" params? ")" ":" _NEWLINE INDENT statement+ DEDENT
+// IMPORTANTE: Dentro de blocos INDENT/DEDENT, usar block_stmt em vez de statement
+async_function_def: "async" "def" NAME "(" params? ")" ":" _NEWLINE INDENT block_stmt+ DEDENT
+function_def: "def" NAME "(" params? ")" ":" _NEWLINE INDENT block_stmt+ DEDENT
 return_stmt: "return" expr?
 
 // Classes - Usando INDENT/DEDENT para blocos
 // init_stmt e task_stmt são statements válidos APENAS dentro de class_def
 // Eles são tratados como statements normais quando dentro da classe
-class_def: ("class" | "create" "class" | "make" "class" | "define" "class") NAME ("(" inheritance ")")? ":" _NEWLINE INDENT statement+ DEDENT
+// IMPORTANTE: Dentro de blocos INDENT/DEDENT, usar block_stmt em vez de statement
+class_def: ("class" | "create" "class" | "make" "class" | "define" "class") NAME ("(" inheritance ")")? ":" _NEWLINE INDENT block_stmt+ DEDENT
 // init_stmt: método especial __init__ (só dentro de classes)
 // task_stmt: métodos de classe (só dentro de classes)
 // Ambos usam a mesma estrutura de function_def, mas o transformer diferencia pelo contexto
 
 // Exceções (ULTRA SIMPLES: apenas "try", "except", "finally")
-attempt_stmt: "try" ":" _NEWLINE INDENT statement+ DEDENT
-catch_stmt: "except" (NAME ("as" NAME)?)? ":" _NEWLINE INDENT statement+ DEDENT
-finally_stmt: "finally" ":" _NEWLINE INDENT statement+ DEDENT
+// IMPORTANTE: Dentro de blocos INDENT/DEDENT, usar block_stmt em vez de statement
+attempt_stmt: "try" ":" _NEWLINE INDENT block_stmt+ DEDENT
+catch_stmt: "except" (NAME ("as" NAME)?)? ":" _NEWLINE INDENT block_stmt+ DEDENT
+finally_stmt: "finally" ":" _NEWLINE INDENT block_stmt+ DEDENT
 
 // Match/Case - Usando INDENT/DEDENT para blocos
 match_stmt: "match" expr ":" _NEWLINE INDENT case_stmt+ DEDENT
@@ -156,22 +178,39 @@ walrus_stmt: NAME ":=" expr
 type_hint_stmt: NAME ":" type_annotation ("=" expr)?
 type_annotation: NAME | "int" | "str" | "float" | "bool" | "list" | "dict" | "tuple" | "set" | "None"
 
-// Expressões
-condition: expr comparison expr
-         | expr ("is" | "equals" | "equal" "to") expr
-         | expr ("is" "not" | "not" "equal" "to") expr
-         | expr ("is" "over" | "is" "greater" "than" | "is" "above" | "greater" "than") expr
-         | expr ("is" "under" | "is" "less" "than" | "is" "below" | "less" "than") expr
-         | expr ("is" "at" "least" | "is" "greater" "than" "or" "equal" "to") expr
-         | expr ("is" "at" "most" | "is" "less" "than" "or" "equal" "to") expr
-         | expr ("is" "in" | "is" "not" "in") expr
+// Expressões - ULTRA SIMPLIFICADAS para evitar ambiguidade
+// IMPORTANTE: Restringir ao mínimo para garantir que o parser saiba quando a expressão termina
+?condition: comparison
+          | atom
 
-comparison: ">" | "<" | ">=" | "<=" | "==" | "!="
+// Comparação simples: NAME comparison_op atom
+comparison: atom comparison_op atom
 
-// Expressões RESTRITAS (não competem com statements)
-?expr: term (("+" | "-") term)*
-?term: factor (("*" | "/" | "//" | "%" | "**") factor)*
-?factor: NUMBER | STRING | NAME | "(" expr ")" | function_call | attribute_access | subscription | list_comprehension | dict_comprehension | set_comprehension
+// Átomo (valor simples)
+?atom: NAME | NUMBER | STRING
+
+// Operadores de comparação Python (suportados após normalize_operators)
+// IMPORTANTE: Definir como terminais para evitar conflitos
+GREATER: ">"
+LESS: "<"
+GREATER_EQUAL: ">="
+LESS_EQUAL: "<="
+EQUALS: "=="
+NOT_EQUAL: "!="
+
+// Operador de comparação
+comparison_op: GREATER | LESS | GREATER_EQUAL | LESS_EQUAL | EQUALS | NOT_EQUAL
+
+// Expressões - ULTRA SIMPLIFICADAS (temporariamente)
+// IMPORTANTE: Restringir ao mínimo para garantir que o parser saiba quando a expressão termina
+// TODO: Expandir gradualmente após confirmar que funciona
+?expr: atom
+     | function_call
+     | attribute_access
+     | subscription
+
+// Átomo (valor simples) - já definido acima em condition
+// ?atom: NAME | NUMBER | STRING  // Removido - já definido acima
 
 function_call: NAME "(" args? ")"
 args: expr ("," expr)*
@@ -202,16 +241,22 @@ pattern: expr | "_" | tuple_pattern | list_pattern
 tuple_pattern: "(" pattern ("," pattern)* ")"
 list_pattern: "[" pattern ("," pattern)* "]"
 
-// Python puro (escape) - MUITO RESTRITIVO
-// Só captura linhas que NÃO começam com keywords Mython
-python_escape: /(?!^\s*(if|elif|else|when|whenever|say|print|show|display|tell|ask|get|read|prompt|for|while|def|class|try|except|finally|with|repeat|do|loop|break|stop|continue|skip|pass|set|assign|let|make|put|store|save|create|initialize|define|function|return|give|back|send|add|append|remove|delete|wait|random|use|from|import|attempt|catch|raise|assert|lambda|yield|await|match|case|list|dict|tuple|set)\b).+/
+// Python puro (escape) - TEMPORARIAMENTE DESABILITADO PARA DEBUG DO INDENTER
+// TODO: Reativar após corrigir problemas de indentação
+// python_escape: /(?!\s*(if|elif|else|when|whenever|say|print|show|display|tell|ask|get|read|prompt|for|while|def|class|try|except|finally|with|repeat|do|loop|break|stop|continue|skip|pass|set|assign|let|make|put|store|save|create|initialize|define|function|return|give|back|send|add|append|remove|delete|wait|random|use|from|import|attempt|catch|raise|assert|lambda|yield|await|match|case|list|dict|tuple|set)\b)(?!["']).+/
 
 // Terminais
+// IMPORTANTE: Ordem importa - STRING deve estar antes de python_escape para ser capturado corretamente
+STRING: /"[^"]*"|'[^']*'/
+FSTRING: /f"[^"]*"|f'[^']*'/
+RSTRING: /r"[^"]*"|r'[^']*'/
+BSTRING: /b"[^"]*"|b'[^']*'/
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
 NUMBER: /\d+(\.\d+)?/
-STRING: /"[^"]*"|'[^']*'|f"[^"]*"|f'[^']*'|r"[^"]*"|r'[^']*'|b"[^"]*"|b'[^']*'/
 
-%import common.WS
-// NÃO ignoramos WS - precisamos para indentação
-// O indenter vai processar NEWLINE, INDENT e DEDENT
-// _NEWLINE é declarado via %declare, não definido como terminal aqui
+// Definir _NEWLINE explicitamente para o indenter
+// IMPORTANTE: Captura newline + espaços/tabs seguintes (indentação)
+_NEWLINE: /(\r?\n[ \t]*)+/
+
+// Ignorar apenas espaços/tabs entre tokens (NÃO newlines - eles são capturados por _NEWLINE)
+%ignore /[ \t]+/

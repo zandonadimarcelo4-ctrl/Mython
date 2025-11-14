@@ -1,3 +1,4 @@
 # Exemplo simples: Hello World
 say "Hello, World!"
 
+say "Welcome to Mython IDE!"

@@ -2,7 +2,7 @@
 Transformer para converter AST do Lark em código Python.
 """
 
-from lark import Transformer, Token
+from lark import Transformer, Token, Tree
 from typing import List, Any
 
 
@@ -57,6 +57,11 @@ class MythonTransformer(Transformer):
         # Processar cada statement e adicionar às linhas
         for stmt in statements:
             if stmt:
+                # Se é Tree, transformar recursivamente
+                if isinstance(stmt, Tree):
+                    transformed = self.transform(stmt)
+                    if transformed:
+                        stmt = transformed
                 # Se não é string, converter
                 if not isinstance(stmt, str):
                     stmt = str(stmt)
@@ -74,9 +79,17 @@ class MythonTransformer(Transformer):
         if not args:
             return ""
         result = args[0]
+        
+        # Se é Tree, transformar recursivamente
+        if isinstance(result, Tree):
+            transformed = self.transform(result)
+            if transformed:
+                result = transformed
+        
         # Garantir que é string
         if not isinstance(result, str):
             result = str(result)
+        
         # Se parece ser uma string quebrada em caracteres (TODAS as linhas têm apenas 1 caractere), tentar corrigir
         if '\n' in result:
             lines = result.split('\n')
@@ -92,6 +105,88 @@ class MythonTransformer(Transformer):
         # Retornar resultado como está (preservar indentação e quebras de linha)
         return result
     
+    def block_stmt(self, args: List[Any]) -> str:
+        """Um statement dentro de um bloco (if, while, for, etc.)."""
+        # block_stmt: simple_stmt _NEWLINE? | compound_stmt
+        # args[0] = simple_stmt ou compound_stmt
+        # args[1] = _NEWLINE? (opcional)
+        if not args:
+            return ""
+        
+        # Processar o primeiro argumento (simple_stmt ou compound_stmt)
+        result = args[0]
+        
+        # Se é Tree, transformar recursivamente
+        if isinstance(result, Tree):
+            transformed = self.transform(result)
+            if transformed:
+                result = transformed
+        
+        # Garantir que é string
+        if not isinstance(result, str):
+            result = str(result)
+        
+        # Retornar resultado (preservar indentação)
+        return result
+    
+    def simple_stmt(self, args: List[Any]) -> str:
+        """Statement simples - transforma recursivamente."""
+        if not args:
+            return ""
+        # args[0] é o statement (say_stmt, ask_stmt, etc.)
+        # args[1] pode ser _NEWLINE (opcional)
+        result = args[0]
+        
+        # Se é Tree, transformar recursivamente
+        if isinstance(result, Tree):
+            transformed = self.transform(result)
+            if transformed:
+                result = transformed
+        
+        # Garantir que é string
+        if not isinstance(result, str):
+            result = str(result)
+        
+        # Retornar resultado (NEWLINE já foi processado)
+        return result
+    
+    def compound_stmt(self, args: List[Any]) -> str:
+        """Statement composto - transforma recursivamente."""
+        if not args:
+            return ""
+        # args[0] é o compound statement (if_stmt, while_stmt, etc.)
+        result = args[0]
+        
+        # Se é Tree, transformar recursivamente
+        if isinstance(result, Tree):
+            transformed = self.transform(result)
+            if transformed:
+                result = transformed
+        
+        # Garantir que é string
+        if not isinstance(result, str):
+            result = str(result)
+        
+        # Se parece ser uma representação de Tree, tentar extrair o conteúdo
+        if isinstance(result, str) and result.startswith("Tree("):
+            # Isso significa que o transform falhou - tentar transformar children diretamente
+            if hasattr(args[0], 'children') and args[0].children:
+                # Transformar cada filho
+                transformed_children = []
+                for child in args[0].children:
+                    if isinstance(child, Tree):
+                        transformed = self.transform(child)
+                        if transformed and isinstance(transformed, str):
+                            transformed_children.append(transformed)
+                    elif isinstance(child, str):
+                        transformed_children.append(child)
+                
+                if transformed_children:
+                    # Juntar children transformados
+                    result = "\n".join(str(c) for c in transformed_children if c and str(c).strip())
+        
+        return result
+    
     def INDENT(self, token):
         """Token INDENT - incrementa nível de indentação."""
         self.indent_level += 1
@@ -104,7 +199,7 @@ class MythonTransformer(Transformer):
     
     def _NEWLINE(self, token):
         """Token _NEWLINE - nova linha."""
-        return "\n"
+        return ""
     
     def block(self, statements: List[Any]) -> str:
         """
@@ -176,29 +271,46 @@ class MythonTransformer(Transformer):
         """
         ask - ULTRA SIMPLES: apenas "ask" + opcional "number"
         ask name = input() ou ask name number = int(input())
+        Também suporta: ask number name = int(input())
         """
-        # args[0] = NAME
-        # args[1] = opcional "number" (Token)
-        # args[2] = opcional STRING (prompt)
-        # args[-1] = _NEWLINE (ignorar)
+        # Detectar padrão: pode ser "ask NAME number STRING?" ou "ask number NAME STRING?"
+        # args pode ser:
+        # - [NAME, "number", STRING?] - "ask name number ..."
+        # - [NAME, "number"] - "ask name number"
+        # - ["number", NAME, STRING?] - "ask number name ..."
+        # - ["number", NAME] - "ask number name"
+        # - [NAME, STRING?] - "ask name ..."
+        # - [NAME] - "ask name"
         
-        var_name = args[0].value if isinstance(args[0], Token) else self._expr(args[0])
-        
-        # Verificar se tem "number" ou STRING (prompt)
+        var_name = None
         is_number = False
         prompt = '""'
         
-        for arg in args[1:]:
-            # Ignorar _NEWLINE
-            if hasattr(arg, 'type') and arg.type == '_NEWLINE':
-                continue
+        # Verificar se primeiro argumento é "number" (padrão "ask number NAME")
+        if args and isinstance(args[0], Token) and args[0].value == "number":
+            is_number = True
+            # args[1] deve ser o NAME
+            if len(args) > 1:
+                var_name = args[1].value if isinstance(args[1], Token) else self._expr(args[1])
+            # args[2] pode ser STRING (prompt)
+            if len(args) > 2 and hasattr(args[2], 'type') and args[2].type == 'STRING':
+                prompt = args[2].value if isinstance(args[2], Token) else self._expr(args[2])
+        else:
+            # Padrão normal: "ask NAME ..."
+            var_name = args[0].value if isinstance(args[0], Token) else self._expr(args[0])
             
-            # Verificar se é "number"
-            if isinstance(arg, Token) and arg.value == "number":
-                is_number = True
-            # Se é STRING, é o prompt
-            elif hasattr(arg, 'type') and arg.type == 'STRING':
-                prompt = self._expr(arg)
+            # Verificar se tem "number" ou STRING (prompt)
+            for arg in args[1:]:
+                # Ignorar _NEWLINE
+                if hasattr(arg, 'type') and arg.type == '_NEWLINE':
+                    continue
+                
+                # Verificar se é "number"
+                if isinstance(arg, Token) and arg.value == "number":
+                    is_number = True
+                # Se é STRING, é o prompt
+                elif hasattr(arg, 'type') and arg.type == 'STRING':
+                    prompt = self._expr(arg)
         
         # Gerar código
         if is_number:
@@ -211,50 +323,147 @@ class MythonTransformer(Transformer):
     # ============================================
     
     def if_stmt(self, args: List[Any]) -> str:
-        """if/when/whenever - Com INDENT/DEDENT, os blocos já vêm estruturados corretamente."""
-        if not args or len(args) < 1:
+        """
+        if_stmt: "if" condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
+        
+        IMPORTANTE: O Lark injeta INDENT/DEDENT como tokens nos args.
+        Estrutura esperada dos args:
+        - args[0] = condition (Tree(comparison, ...) ou Tree(atom, ...))
+        - args[1] = Token(INDENT, ...) (ignorar - apenas ajustar indent_level)
+        - args[2:-2] = block_stmt+ (Tree(simple_stmt, ...) ou Tree(compound_stmt, ...))
+        - args[-2] = Token(DEDENT, ...) (ignorar - apenas ajustar indent_level)
+        - args[-1] = Tree(else_block, ...) (opcional)
+        """
+        if not args:
             return ""
         
-        # args[0] = condition
-        # args[1] = _NEWLINE token (ignorar)
-        # args[2] = INDENT token (processar - incrementa indent_level)
-        # args[3:-1] = statements do bloco
-        # args[-1] = DEDENT token (processar - decrementa indent_level)
-        
         # Processar condição
-        cond_tree = args[0]
-        if hasattr(cond_tree, 'children') and cond_tree.children:
-            try:
-                condition = self.transform(cond_tree)
-                if not isinstance(condition, str):
-                    condition = self._expr(cond_tree)
-            except:
-                condition = self._expr(cond_tree)
+        condition = self._expr(args[0])
+        
+        # Separar block_stmt+ e else_block?
+        block_stmts = []
+        else_block_str = None
+        
+        # Processar args[1:] (pular condition)
+        i = 1
+        while i < len(args):
+            arg = args[i]
+            
+            # Processar INDENT (ajustar indent_level)
+            if isinstance(arg, Token) and arg.type == 'INDENT':
+                self.indent_level += 1
+                i += 1
+                continue
+            
+            # Processar DEDENT (ajustar indent_level)
+            if isinstance(arg, Token) and arg.type == 'DEDENT':
+                self.indent_level -= 1
+                # Tudo depois do DEDENT é else_block (se existir)
+                if i + 1 < len(args):
+                    else_block_tree = args[i + 1]
+                    if isinstance(else_block_tree, Tree) and else_block_tree.data == 'else_block':
+                        # Transformar else_block
+                        else_block_str = self.transform(else_block_tree)
+                break
+            
+            # Se é Tree com data 'else_block', é o else_block
+            if isinstance(arg, Tree) and arg.data == 'else_block':
+                # Transformar else_block
+                else_block_str = self.transform(arg)
+                break
+            
+            # Se é Tree com data 'block_stmt' ou 'simple_stmt', transformar recursivamente
+            if isinstance(arg, Tree):
+                transformed = self.transform(arg)
+                if transformed and isinstance(transformed, str) and transformed.strip():
+                    block_stmts.append(transformed)
+            
+            # Se já é string, adicionar diretamente
+            elif isinstance(arg, str) and arg.strip() and arg not in ['INDENT', 'DEDENT', '_NEWLINE']:
+                block_stmts.append(arg)
+            
+            i += 1
+        
+        # Construir bloco if
+        if block_stmts:
+            # Juntar block_stmts com quebras de linha
+            # Cada block_stmt já deve estar indentado corretamente
+            block_lines = []
+            for stmt in block_stmts:
+                for line in stmt.split('\n'):
+                    if line.strip():
+                        # Adicionar indentação do bloco if (4 espaços)
+                        block_lines.append("    " + line.strip())
+            block = "\n".join(block_lines)
         else:
-            condition = self._expr(cond_tree)
-        
-        # Processar statements do bloco (pular _NEWLINE, INDENT e DEDENT)
-        statements = []
-        for arg in args[1:]:
-            # Ignorar tokens de controle
-            if isinstance(arg, str):
-                if arg.strip() in ['INDENT', 'DEDENT', '_NEWLINE']:
-                    continue
-            # Verificar se é um Token
-            if hasattr(arg, 'type'):
-                if arg.type in ['INDENT', 'DEDENT', '_NEWLINE']:
-                    if arg.type == 'INDENT':
-                        self.indent_level += 1
-                    elif arg.type == 'DEDENT':
-                        self.indent_level -= 1
-                    continue
-            statements.append(arg)
-        
-        # Construir o bloco
-        block = self.block(statements) if statements else ""
+            block = "    pass"
         
         # Construir resultado
-        result = self.indent() + f"if {condition}:"
+        result = f"if {condition}:"
+        if block:
+            result += "\n" + block
+        
+        # Adicionar else_block se existir
+        if else_block_str and isinstance(else_block_str, str):
+            # O else_block já retorna "else:" sem indentação extra
+            result += "\n" + else_block_str
+        
+        return result
+    
+    def else_block(self, args: List[Any]) -> str:
+        """
+        else_block: _NEWLINE* "else" ":" _NEWLINE INDENT block_stmt+ DEDENT
+        
+        Estrutura esperada dos args (após o parser processar):
+        - args[0] = Token(INDENT, ...) (ignorar - apenas ajustar indent_level)
+        - args[1:-1] = block_stmt+ (Tree(simple_stmt, ...) ou Tree(compound_stmt, ...))
+        - args[-1] = Token(DEDENT, ...) (ignorar - apenas ajustar indent_level)
+        
+        NOTA: "else" e ":" já foram consumidos pela gramática e não aparecem nos args.
+        """
+        if not args:
+            return "else:\n    pass"
+        
+        # Processar block_stmt+
+        block_stmts = []
+        
+        # Processar args (pular INDENT/DEDENT)
+        for arg in args:
+            # Processar INDENT (ajustar indent_level)
+            if isinstance(arg, Token) and arg.type == 'INDENT':
+                self.indent_level += 1
+                continue
+            
+            # Processar DEDENT (ajustar indent_level)
+            if isinstance(arg, Token) and arg.type == 'DEDENT':
+                self.indent_level -= 1
+                continue
+            
+            # Se é Tree, transformar recursivamente
+            if isinstance(arg, Tree):
+                transformed = self.transform(arg)
+                if transformed and isinstance(transformed, str) and transformed.strip():
+                    block_stmts.append(transformed)
+            
+            # Se já é string, adicionar diretamente
+            elif isinstance(arg, str) and arg.strip() and arg not in ['INDENT', 'DEDENT', '_NEWLINE', 'else', ':']:
+                block_stmts.append(arg)
+        
+        # Construir bloco else
+        if block_stmts:
+            # Juntar block_stmts com quebras de linha
+            block_lines = []
+            for stmt in block_stmts:
+                for line in stmt.split('\n'):
+                    if line.strip():
+                        # Adicionar indentação do bloco else (4 espaços)
+                        block_lines.append("    " + line.strip())
+            block = "\n".join(block_lines)
+        else:
+            block = "    pass"
+        
+        # Construir resultado (else: sem indentação extra - mesmo nível do if)
+        result = "else:"
         if block:
             result += "\n" + block
         
@@ -385,55 +594,54 @@ class MythonTransformer(Transformer):
         return cond_str
     
     def comparison(self, args: List[Any]) -> str:
-        """Operador de comparação: >, <, >=, <=, ==, !="""
-        # comparison pode ser um Token diretamente ou uma Tree
-        if args:
-            return self._expr(args[0])
-        # Se não tem args, pode ser um Token diretamente
-        return ""
+        """
+        comparison: atom comparison_op atom
+        
+        args[0] = left atom (NAME, NUMBER, STRING)
+        args[1] = comparison_op (Tree com Token(GREATER, '>'), etc.)
+        args[2] = right atom (NAME, NUMBER, STRING)
+        """
+        if len(args) < 3:
+            # Se não tem 3 args, retornar apenas o primeiro
+            return self._expr(args[0]) if args else ""
+        
+        left = self._expr(args[0])
+        op = self._expr(args[1])  # comparison_op
+        right = self._expr(args[2])
+        
+        return f"{left} {op} {right}"
     
-    def condition(self, args: List[Any]) -> str:
-        """Condição - SIMPLIFICADO: normalização já foi feita antes do parsing."""
+    def comparison_op(self, args: List[Any]) -> str:
+        """
+        comparison_op: GREATER | LESS | GREATER_EQUAL | LESS_EQUAL | EQUALS | NOT_EQUAL
+        
+        args[0] = Token(GREATER, '>') ou Token(LESS, '<'), etc.
+        """
         if not args:
             return ""
         
-        # A condição já foi normalizada antes do parsing
-        # A estrutura é: expression comparison expression
-        # Se comparison está vazio, buscar diretamente no código normalizado
+        # Se é Token, retornar valor diretamente
+        if isinstance(args[0], Token):
+            return args[0].value
         
-        # Extrair as expressões
-        left_expr = self._expr(args[0]) if len(args) > 0 else ""
-        right_expr = self._expr(args[2]) if len(args) > 2 else ""
+        # Se é Tree, transformar recursivamente
+        if isinstance(args[0], Tree):
+            return self.transform(args[0])
         
-        # Tentar extrair o operador do código normalizado
-        if self.source_code and left_expr and right_expr:
-            import re
-            # Buscar padrão: left_expr OPERADOR right_expr
-            # Operadores possíveis: >, <, >=, <=, ==, !=
-            pattern = rf'\b{re.escape(left_expr)}\s*([><=!]+)\s*{re.escape(right_expr)}\b'
-            match = re.search(pattern, self.source_code)
-            if match:
-                operator = match.group(1)
-                return f"{left_expr} {operator} {right_expr}"
+        # Se é string, retornar diretamente
+        return str(args[0])
+    
+    def condition(self, args: List[Any]) -> str:
+        """
+        condition: comparison | atom
         
-        # Fallback: processar normalmente (pode não funcionar se comparison estiver vazio)
-        parts = []
-        for arg in args:
-            part = self._expr(arg)
-            if part:
-                parts.append(part)
+        Pode ser Tree(comparison, ...) ou Tree(atom, ...)
+        """
+        if not args:
+            return ""
         
-        # Se temos 2 partes mas falta o operador, tentar inferir
-        if len(parts) == 2 and self.source_code:
-            left, right = parts[0], parts[1]
-            import re
-            pattern = rf'\b{re.escape(left)}\s*([><=!]+)\s*{re.escape(right)}\b'
-            match = re.search(pattern, self.source_code)
-            if match:
-                return f"{left} {match.group(1)} {right}"
-        
-        # Juntar as partes
-        return " ".join(parts) if parts else ""
+        # Transformar recursivamente
+        return self._expr(args[0])
     
     # ============================================
     # Loops

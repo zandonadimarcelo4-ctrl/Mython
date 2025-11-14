@@ -1,5 +1,16 @@
 # 🎯 Mython Ultra Simples - Mais Simples que Moonscript
 
+## 🌍 Tradução Automática
+
+**IMPORTANTE:** O Mython traduz automaticamente qualquer código para inglês antes de executar!
+
+Você pode escrever em **qualquer idioma** e o sistema detecta e traduz automaticamente:
+- 🇧🇷 Português: `perguntar`, `dizer`, `se`, `senão`
+- 🇪🇸 Espanhol: `preguntar`, `decir`, `si`, `sino`
+- 🇺🇸 Inglês: `ask`, `say`, `if`, `else`
+
+---
+
 ## 🎯 Objetivo
 
 Criar a linguagem mais simples possível, capaz de fazer coisas avançadas de forma extremamente intuitiva.
@@ -9,6 +20,7 @@ Criar a linguagem mais simples possível, capaz de fazer coisas avançadas de fo
 - ✅ **Máxima clareza**
 - ✅ **Sintaxe natural como conversa**
 - ✅ **Zero complexidade desnecessária**
+- ✅ **Tradução automática para qualquer idioma**
 
 ---
 
@@ -72,9 +84,18 @@ say "Hello " + name  # Diz expressão
 
 #### 2. **Perguntar**
 ```python
-ask name              # Pergunta texto
-ask age number        # Pergunta número
-ask name "Your name?" # Com prompt (opcional)
+ask name                      # Pergunta texto
+ask number age                # Pergunta número
+ask name "Your name?"         # Com prompt (opcional)
+ask number age "Your age?"    # Número com prompt
+```
+
+**Tradução Automática:**
+```python
+# Português (traduzido automaticamente):
+perguntar nome                          # ask name
+perguntar numero idade                  # ask number age
+perguntar numero idade "Sua idade?"     # ask number age "Your age?"
 ```
 
 #### 3. **Fazer/Alterar**
@@ -93,6 +114,13 @@ person = {name: "John", age: 30}  # Dict (sem aspas nas chaves)
 
 #### 1. **Se**
 ```python
+# Forma natural (normalizada automaticamente):
+if age is over 18:      # Normaliza para: if age > 18:
+    say "Adult"
+else:
+    say "Minor"
+
+# Forma Python direta (também funciona):
 if age > 18:
     say "Adult"
 else:
@@ -100,6 +128,14 @@ else:
 ```
 
 **Apenas:** `if` e `else` (sem `elif`, usar `else if`)
+
+**Operadores Suportados:**
+- `is over` / `is greater than` → `>`
+- `is under` / `is less than` → `<`
+- `is at least` → `>=`
+- `is at most` → `<=`
+- `equals` / `is equal to` → `==`
+- `is not` → `!=`
 
 #### 2. **Repetir**
 ```python

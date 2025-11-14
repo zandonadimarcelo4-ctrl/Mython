@@ -1,8 +1,12 @@
-# Exemplo em Português
-dizer "Olá, Mundo!"
-perguntar nome "Qual é seu nome? "
-se nome é "João":
-    dizer "Olá João!"
-senão:
-    dizer "Olá " + nome
+# Exemplo: Hello World em Português
+# O Mython detecta automaticamente o idioma e traduz para inglês!
 
+perguntar numero idade "Digite sua idade: "
+
+se idade > 18:
+
+    dizer "Você é adulto"
+
+senão:
+
+    dizer "Você é menor"
