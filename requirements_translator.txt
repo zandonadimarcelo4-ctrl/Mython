@@ -1,0 +1,14 @@
+# Dependências para o sistema de tradução híbrido do Mython
+# PRIMARY: LibreTranslate (via requests - API online)
+# FALLBACK: Argos Translate (100% offline)
+
+# Para LibreTranslate (PRIMARY - online)
+requests>=2.31.0
+
+# Para Argos Translate (FALLBACK - offline, opcional)
+# Instalar com: pip install argostranslate
+argostranslate>=1.9.0
+
+# Dependências existentes do Mython
+lark>=1.1.0
+

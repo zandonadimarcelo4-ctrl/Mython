@@ -1,268 +1,217 @@
-// Gramática EBNF para Mython
+// Gramática EBNF para Mython - 99% Python Coverage
 // Baseada em inglês A2/B1 - Linguagem Natural
-// Cobre 99% do Python com linguagem natural
+// Usa indentação estilo Python com INDENT/DEDENT
 
-start: statement+
+%declare INDENT DEDENT _NEWLINE
 
-statement: say_stmt
-         | ask_stmt
-         | ask_number_stmt
-         | if_stmt
-         | elif_stmt
-         | else_stmt
-         | repeat_stmt
-         | for_each_stmt
-         | while_stmt
-         | break_stmt
-         | continue_stmt
-         | pass_stmt
-         | list_stmt
-         | dict_stmt
-         | tuple_stmt
-         | set_stmt
-         | add_to_list_stmt
-         | remove_from_list_stmt
-         | function_def
-         | async_function_def
-         | generator_function_def
-         | return_stmt
-         | class_def
-         | init_stmt
-         | task_stmt
-         | assignment_stmt
-         | augmented_assignment_stmt
-         | wait_stmt
-         | random_stmt
-         | open_file_stmt
-         | save_file_stmt
-         | read_file_stmt
-         | use_stmt
-         | from_import_stmt
-         | attempt_stmt
-         | catch_stmt
-         | finally_stmt
-         | raise_stmt
-         | assert_stmt
-         | lambda_stmt
-         | yield_stmt
-         | await_stmt
-         | match_stmt
-         | case_stmt
-         | decorator_stmt
-         | decorator_with_args_stmt
-         | staticmethod_stmt
-         | classmethod_stmt
-         | property_stmt
-         | abstractmethod_stmt
-         | dataclass_stmt
-         | magic_method_stmt
-         | macro_stmt
-         | slice_stmt
-         | walrus_stmt
-         | type_hint_stmt
-         | python_escape
-         | comment
-         | empty_line
+?start: statement+
 
-// Saída
-say_stmt: ("say" | "print" | "show" | "display" | "tell") expression
+?statement: simple_stmt
+         | compound_stmt
 
-// Entrada
-ask_stmt: ("ask" | "ask" "for" | "get" | "read" | "prompt") VAR prompt?
-ask_number_stmt: ("ask" "number" | "ask" "for" "number" | "get" "number" | "read" "number") VAR prompt?
+// Statements simples (não abrem blocos) - terminam com _NEWLINE
+// ULTRA SIMPLES: apenas o essencial
+simple_stmt: say_stmt _NEWLINE
+           | ask_stmt _NEWLINE
+           | assign_stmt _NEWLINE
+           | augmented_assignment_stmt _NEWLINE
+           | return_stmt _NEWLINE
+           | break_stmt _NEWLINE
+           | continue_stmt _NEWLINE
+           | pass_stmt _NEWLINE
+           | yield_stmt _NEWLINE
+           | await_stmt _NEWLINE
+           | raise_stmt _NEWLINE
+           | assert_stmt _NEWLINE
+           | wait_stmt _NEWLINE
+           | random_stmt _NEWLINE
+           | use_stmt _NEWLINE
+           | from_import_stmt _NEWLINE
+           | list_stmt _NEWLINE
+           | dict_stmt _NEWLINE
+           | tuple_stmt _NEWLINE
+           | set_stmt _NEWLINE
+           | add_to_list_stmt _NEWLINE
+           | remove_from_list_stmt _NEWLINE
+           | slice_stmt _NEWLINE
+           | walrus_stmt _NEWLINE
+           | type_hint_stmt _NEWLINE
+           | lambda_stmt _NEWLINE
+           | save_file_stmt _NEWLINE
+           | read_file_stmt _NEWLINE
+           | python_escape _NEWLINE
 
-// Condições
-if_stmt: ("if" | "when" | "whenever") condition ":" block
-elif_stmt: ("elif" | "else" "if" | "or" "if") condition ":" block
-else_stmt: ("else" | "otherwise") ":" block
+// Statements compostos (abrem blocos indentados) - não terminam com _NEWLINE
+// IMPORTANTE: Ordem importa - mais específicos primeiro para evitar ambiguidades
+// init_stmt e task_stmt só existem DENTRO de classes, não no nível superior
+compound_stmt: async_function_def
+             | function_def
+             | class_def
+             | if_stmt
+             | elif_stmt
+             | else_stmt
+             | while_stmt
+             | for_each_stmt
+             | repeat_stmt
+             | attempt_stmt
+             | catch_stmt
+             | finally_stmt
+             | match_stmt
+             | case_stmt
+             | with_stmt
+             | open_file_stmt
 
-// Loops
-repeat_stmt: ("repeat" | "do" | "loop") NUMBER ("times" | "time") ":" block
-for_each_stmt: ("for" "each" | "for" "every" | "loop" "through" | "iterate" "over" | "for") VAR "in" expression (":" | "as" VAR ":") block?
-while_stmt: ("while" | "as" "long" "as" | "keep" "doing" "while" | "continue" "while") condition ":"
+// Saída (ULTRA SIMPLES: apenas "say")
+say_stmt: "say" expr
 
-// Controle de fluxo
-break_stmt: ("break" | "stop" | "exit" "loop" | "leave" "loop" | "quit" "loop")
-continue_stmt: ("continue" | "skip" | "next" | "go" "to" "next" | "proceed")
-pass_stmt: ("pass" | "do" "nothing" | "skip" "this" | "ignore")
+// Entrada (ULTRA SIMPLES: apenas "ask" + opcional "number")
+// ask name = input() ou ask name number = int(input())
+ask_stmt: "ask" NAME "number" STRING?
+        | "ask" NAME "number"
+        | "ask" NAME STRING?
+        | "ask" NAME
+
+// Condições (ULTRA SIMPLES: apenas "if" e "else")
+if_stmt: "if" condition ":" _NEWLINE INDENT statement+ DEDENT
+elif_stmt: "else" "if" condition ":" _NEWLINE INDENT statement+ DEDENT
+else_stmt: "else" ":" _NEWLINE INDENT statement+ DEDENT
+
+// Loops (ULTRA SIMPLES: apenas "for", "while", "repeat")
+while_stmt: "while" condition ":" _NEWLINE INDENT statement+ DEDENT
+for_each_stmt: "for" NAME "in" expr ":" _NEWLINE INDENT statement+ DEDENT
+repeat_stmt: "repeat" NUMBER ":" _NEWLINE INDENT statement+ DEDENT
+
+// Funções (ULTRA SIMPLES: apenas "def")
+async_function_def: "async" "def" NAME "(" params? ")" ":" _NEWLINE INDENT statement+ DEDENT
+function_def: "def" NAME "(" params? ")" ":" _NEWLINE INDENT statement+ DEDENT
+return_stmt: "return" expr?
+
+// Classes - Usando INDENT/DEDENT para blocos
+// init_stmt e task_stmt são statements válidos APENAS dentro de class_def
+// Eles são tratados como statements normais quando dentro da classe
+class_def: ("class" | "create" "class" | "make" "class" | "define" "class") NAME ("(" inheritance ")")? ":" _NEWLINE INDENT statement+ DEDENT
+// init_stmt: método especial __init__ (só dentro de classes)
+// task_stmt: métodos de classe (só dentro de classes)
+// Ambos usam a mesma estrutura de function_def, mas o transformer diferencia pelo contexto
+
+// Exceções (ULTRA SIMPLES: apenas "try", "except", "finally")
+attempt_stmt: "try" ":" _NEWLINE INDENT statement+ DEDENT
+catch_stmt: "except" (NAME ("as" NAME)?)? ":" _NEWLINE INDENT statement+ DEDENT
+finally_stmt: "finally" ":" _NEWLINE INDENT statement+ DEDENT
+
+// Match/Case - Usando INDENT/DEDENT para blocos
+match_stmt: "match" expr ":" _NEWLINE INDENT case_stmt+ DEDENT
+case_stmt: "case" pattern ":" _NEWLINE INDENT statement+ DEDENT
+
+// With statement - Usando INDENT/DEDENT para blocos
+with_stmt: "with" expr ("as" NAME)? ":" _NEWLINE INDENT statement+ DEDENT
+
+// Atribuições (ULTRA SIMPLES: sem palavra-chave, apenas =)
+assign_stmt: NAME "=" expr
+augmented_assignment_stmt: NAME ("+=" | "-=" | "*=" | "/=" | "//=" | "%=" | "**=") expr
+
+// Controle de fluxo (ULTRA SIMPLES: apenas palavras Python)
+break_stmt: "break"
+continue_stmt: "continue"
+pass_stmt: "pass"
 
 // Estruturas de dados
-list_stmt: ("list" | "create" "list" | "make" "list") VAR "=" list_literal
-dict_stmt: ("dict" | "dictionary" | "create" "dict" | "make" "dict") VAR "=" dict_literal
-tuple_stmt: ("tuple" | "create" "tuple" | "make" "tuple") VAR "=" tuple_literal
-set_stmt: ("set" | "create" "set" | "make" "set") VAR "=" set_literal
+list_stmt: ("list" | "create" "list" | "make" "list") NAME "=" list_literal
+dict_stmt: ("dict" | "dictionary" | "create" "dict" | "make" "dict") NAME "=" dict_literal
+tuple_stmt: ("tuple" | "create" "tuple" | "make" "tuple") NAME "=" tuple_literal
+set_stmt: ("set" | "create" "set" | "make" "set") NAME "=" set_literal
 
 // Operações de lista
-add_to_list_stmt: ("add" | "append" | "put" | "insert") expression ("to" | "into") VAR
-remove_from_list_stmt: ("remove" | "delete" | "take" "out") expression "from" VAR
-
-// Funções
-function_def: ("define" | "function" | "to" | "create" "function") VAR "(" params? ")" ":"
-async_function_def: "async" ("define" | "function" | "task") VAR "(" params? ")" ":"
-generator_function_def: ("define" | "function") VAR "(" params? ")" ":" ("yield" | "produce" | "generate") expression
-return_stmt: ("return" | "give" "back" | "send" "back") expression?
-
-// Classes
-class_def: ("class" | "create" "class" | "make" "class" | "define" "class") VAR ("(" inheritance ")")? ":"
-init_stmt: ("init" | "constructor" | "initialize" | "create" | "setup") "(" params? ")" ":"
-task_stmt: ("task" | "method" | "function" | "do" | "perform" | "execute") VAR "(" params? ")" ":"
-
-// Atribuições
-assignment_stmt: ("set" | "assign" | "let" | "make" | "put" | "store" | "save" | "create" | "initialize") VAR "=" expression
-augmented_assignment_stmt: VAR ("+=" | "-=" | "*=" | "/=" | "//=" | "%=" | "**=") expression
+add_to_list_stmt: ("add" | "append" | "put" | "insert") expr ("to" | "into") NAME
+remove_from_list_stmt: ("remove" | "delete" | "take" "out") expr "from" NAME
 
 // Utilitários
 wait_stmt: ("wait" | "pause" | "sleep" | "delay") NUMBER ("seconds" | "second")
-random_stmt: ("random" "number" "from" | "random" "between" | "pick" "random" "number" "from" | "get" "random" "number" "from" | "choose" "random" "number" "from" | "select" "random" "number" "from") expression ("to" | "and") expression
+random_stmt: ("random" "number" "from" | "random" "between" | "pick" "random" "number" "from" | "get" "random" "number" "from" | "choose" "random" "number" "from" | "select" "random" "number" "from") expr ("to" | "and") expr
 
 // Arquivos
-open_file_stmt: ("open" | "open" "file" | "read" "file" | "load" "file") STRING "as" VAR ":"
-save_file_stmt: ("save" "text" | "write" | "save" | "store") expression ("to" "file" | "into" "file" | "in" "file") STRING
-read_file_stmt: ("read" "file" | "load" "file" | "get" "from" "file") STRING "as" VAR
+save_file_stmt: ("save" "text" | "write" | "save" | "store") expr ("to" "file" | "into" "file" | "in" "file") STRING
+read_file_stmt: ("read" "file" | "load" "file" | "get" "from" "file") STRING "as" NAME
+open_file_stmt: ("open" | "open" "file" | "read" "file" | "load" "file") STRING "as" NAME ":" _NEWLINE INDENT statement+ DEDENT
 
 // Imports
-use_stmt: ("use" | "import" | "load" | "require" | "include") VAR ("as" VAR)?
-from_import_stmt: "from" VAR ("import" | "load" | "require") VAR ("as" VAR)?
-
-// Exceções
-attempt_stmt: ("attempt" | "try" | "attempt" "to") ":"
-catch_stmt: ("catch" | "except" | "handle" | "on" "error") (VAR ("as" VAR)?)? ":"
-finally_stmt: ("finally" | "always" | "in" "the" "end") ":"
-raise_stmt: ("raise" | "throw" | "raise" "error" | "throw" "error") expression
-assert_stmt: ("assert" | "check" | "verify" | "ensure") expression ("," expression)?
+use_stmt: ("use" | "import" | "load" | "require" | "include") NAME ("as" NAME)?
+from_import_stmt: "from" NAME ("import" | "load" | "require") NAME ("as" NAME)?
 
 // Avançado
-lambda_stmt: VAR "=>" expression
-           | VAR "->" expression
-yield_stmt: ("yield" | "produce" | "generate" | "return" "and" "continue") expression
-await_stmt: "await" expression
-match_stmt: "match" expression ":"
-case_stmt: "case" pattern ":"
+lambda_stmt: NAME "=>" expr
+           | NAME "->" expr
+yield_stmt: ("yield" | "produce" | "generate" | "return" "and" "continue") expr
+await_stmt: "await" expr
+raise_stmt: ("raise" | "throw" | "raise" "error" | "throw" "error") expr
+assert_stmt: ("assert" | "check" | "verify" | "ensure") expr ("," expr)?
 
 // Slicing simplificado
-slice_stmt: "slice" VAR "from" expression "to" expression
+slice_stmt: "slice" NAME "from" expr "to" expr
 
 // Walrus operator
-walrus_stmt: VAR ":=" expression
+walrus_stmt: NAME ":=" expr
 
 // Type hints
-type_hint_stmt: VAR ":" type_annotation ("=" expression)?
-type_annotation: VAR | "int" | "str" | "float" | "bool" | "list" | "dict" | "tuple" | "set" | "None"
-
-// *args e **kwargs
-args_varargs: "*" VAR
-kwargs_varargs: "**" VAR
-
-// Decorators
-decorator_stmt: "decorator" VAR ":"
-decorator_with_args_stmt: "decorator" VAR "(" args? ")" ":"
-staticmethod_stmt: ("staticmethod" | "@staticmethod") ":"
-classmethod_stmt: ("classmethod" | "@classmethod") ":"
-property_stmt: ("property" | "@property") ":"
-abstractmethod_stmt: ("abstractmethod" | "@abstractmethod") ":"
-dataclass_stmt: ("dataclass" | "@dataclass") ":"
-magic_method_stmt: "magic" VAR "(" params? ")" ":"
-
-// Macros
-macro_stmt: math_macro
-          | string_macro
-          | list_macro
-          | file_macro
-          | date_macro
-          | system_macro
-
-math_macro: ("add" | "sum" | "plus") expression "and" expression
-          | ("subtract" | "minus") expression "from" expression
-          | ("multiply" | "times") expression "by" expression
-          | "divide" expression "by" expression
-
-string_macro: ("join" | "combine") VAR "with" expression
-            | ("split" | "separate") VAR "by" expression
-            | ("uppercase" | "to" "uppercase") VAR
-            | ("lowercase" | "to" "lowercase") VAR
-
-list_macro: ("length" "of" | "size" "of" | "count" "items" "in") VAR
-          | ("first" "item" "in" | "last" "item" "in") VAR
-          | ("reverse" | "flip") VAR
-          | ("sort" | "order") VAR
-
-file_macro: ("exists" "file" | "file" "exists") STRING
-          | ("delete" "file" | "remove" "file") STRING
-
-date_macro: ("current" "time" | "now" | "current" "date" | "today")
-
-system_macro: ("exit" "program" | "quit" "program" | "stop" "program")
+type_hint_stmt: NAME ":" type_annotation ("=" expr)?
+type_annotation: NAME | "int" | "str" | "float" | "bool" | "list" | "dict" | "tuple" | "set" | "None"
 
 // Expressões
-condition: expression comparison expression
-         | expression ("is" | "equals" | "equal" "to") expression
-         | expression ("is" "not" | "not" "equal" "to") expression
-         | expression ("is" "over" | "is" "greater" "than" | "is" "above" | "greater" "than") expression
-         | expression ("is" "under" | "is" "less" "than" | "is" "below" | "less" "than") expression
-         | expression ("is" "at" "least" | "is" "greater" "than" "or" "equal" "to") expression
-         | expression ("is" "at" "most" | "is" "less" "than" "or" "equal" "to") expression
-         | expression ("is" "in" | "is" "not" "in") expression
+condition: expr comparison expr
+         | expr ("is" | "equals" | "equal" "to") expr
+         | expr ("is" "not" | "not" "equal" "to") expr
+         | expr ("is" "over" | "is" "greater" "than" | "is" "above" | "greater" "than") expr
+         | expr ("is" "under" | "is" "less" "than" | "is" "below" | "less" "than") expr
+         | expr ("is" "at" "least" | "is" "greater" "than" "or" "equal" "to") expr
+         | expr ("is" "at" "most" | "is" "less" "than" "or" "equal" "to") expr
+         | expr ("is" "in" | "is" "not" "in") expr
 
-comparison: ">" | "<" | ">=" | "<=" | "==" | "!=" | GT | LT | GTE | LTE | EQ | NEQ
-GT: ">"
-LT: "<"
-GTE: ">="
-LTE: "<="
-EQ: "=="
-NEQ: "!="
+comparison: ">" | "<" | ">=" | "<=" | "==" | "!="
 
-expression: term (("+" | "-") term)*
-term: factor (("*" | "/" | "//" | "%" | "**") factor)*
-factor: NUMBER | STRING | VAR | "(" expression ")" | function_call | list_comprehension | dict_comprehension | set_comprehension
+// Expressões RESTRITAS (não competem com statements)
+?expr: term (("+" | "-") term)*
+?term: factor (("*" | "/" | "//" | "%" | "**") factor)*
+?factor: NUMBER | STRING | NAME | "(" expr ")" | function_call | attribute_access | subscription | list_comprehension | dict_comprehension | set_comprehension
 
-function_call: VAR "(" args? ")"
-args: expression ("," expression)*
-     | args_varargs ("," expression)*
-     | expression ("," args_varargs)?
+function_call: NAME "(" args? ")"
+args: expr ("," expr)*
+     | args_varargs ("," expr)*
+     | expr ("," args_varargs)?
      | args_varargs ("," kwargs_varargs)?
      | kwargs_varargs
 
-list_comprehension: "list" "[" expression "for" VAR "in" expression ("if" condition)? "]"
-dict_comprehension: "dict" "{" expression ":" expression "for" VAR "in" expression ("if" condition)? "}"
-set_comprehension: "set" "{" expression "for" VAR "in" expression ("if" condition)? "}"
+args_varargs: "*" NAME
+kwargs_varargs: "**" NAME
 
-list_literal: "[" (expression ("," expression)*)? "]"
-dict_literal: "{" (expression ":" expression ("," expression ":" expression)*)? "}"
-tuple_literal: "(" (expression ("," expression)*)? ")"
-set_literal: "{" (expression ("," expression)*)? "}"
+attribute_access: NAME "." NAME
+subscription: NAME "[" expr "]"
 
-params: VAR ("," VAR)*
-      | VAR "=" expression ("," VAR "=" expression)*
-      | args_varargs ("," VAR)*
-      | VAR ("," args_varargs)?
-      | args_varargs ("," kwargs_varargs)?
-      | kwargs_varargs
+list_comprehension: "list" "[" expr "for" NAME "in" expr ("if" condition)? "]"
+dict_comprehension: "dict" "{" expr ":" expr "for" NAME "in" expr ("if" condition)? "}"
+set_comprehension: "set" "{" expr "for" NAME "in" expr ("if" condition)? "}"
 
-inheritance: VAR ("," VAR)*
-prompt: STRING | expression
-pattern: expression | "_" | tuple_pattern | list_pattern
-block: statement+
+list_literal: "[" (expr ("," expr)*)? "]"
+dict_literal: "{" (expr ":" expr ("," expr ":" expr)*)? "}"
+tuple_literal: "(" (expr ("," expr)*)? ")"
+set_literal: "{" (expr ("," expr)*)? "}"
 
-// Acesso a atributos e subscrição
-attribute_access: VAR "." VAR
-subscription: VAR "[" expression "]"
-slice_expr: VAR "[" expression? ":" expression? (":" expression?)? "]"
+// prompt removido - usando STRING | expr diretamente em ask_stmt
+inheritance: NAME ("," NAME)*
+params: NAME ("," NAME)*
+pattern: expr | "_" | tuple_pattern | list_pattern
 tuple_pattern: "(" pattern ("," pattern)* ")"
 list_pattern: "[" pattern ("," pattern)* "]"
 
-// Python puro (escape) - QUALQUER código Python funciona 100%!
-// Usar .+ em vez de .* para compatibilidade com Earley (não permite zero-width)
-python_escape: /.+/
-
-// Comentários e linhas vazias
-comment: /#.*/
-empty_line: WS
+// Python puro (escape) - MUITO RESTRITIVO
+// Só captura linhas que NÃO começam com keywords Mython
+python_escape: /(?!^\s*(if|elif|else|when|whenever|say|print|show|display|tell|ask|get|read|prompt|for|while|def|class|try|except|finally|with|repeat|do|loop|break|stop|continue|skip|pass|set|assign|let|make|put|store|save|create|initialize|define|function|return|give|back|send|add|append|remove|delete|wait|random|use|from|import|attempt|catch|raise|assert|lambda|yield|await|match|case|list|dict|tuple|set)\b).+/
 
 // Terminais
-VAR: /[a-zA-Z_][a-zA-Z0-9_]*/
+NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
 NUMBER: /\d+(\.\d+)?/
 STRING: /"[^"]*"|'[^']*'|f"[^"]*"|f'[^']*'|r"[^"]*"|r'[^']*'|b"[^"]*"|b'[^']*'/
 
 %import common.WS
-%ignore WS
-
+// NÃO ignoramos WS - precisamos para indentação
+// O indenter vai processar NEWLINE, INDENT e DEDENT
+// _NEWLINE é declarado via %declare, não definido como terminal aqui

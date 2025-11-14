@@ -92,12 +92,33 @@ class MythonTransformer(Transformer):
         # Retornar resultado como está (preservar indentação e quebras de linha)
         return result
     
-    def block(self, statements: List[Any]) -> str:
-        """Bloco de código."""
+    def INDENT(self, token):
+        """Token INDENT - incrementa nível de indentação."""
         self.indent_level += 1
+        return ""
+    
+    def DEDENT(self, token):
+        """Token DEDENT - decrementa nível de indentação."""
+        self.indent_level -= 1
+        return ""
+    
+    def _NEWLINE(self, token):
+        """Token _NEWLINE - nova linha."""
+        return "\n"
+    
+    def block(self, statements: List[Any]) -> str:
+        """
+        Bloco de código.
+        NOTA: Com INDENT/DEDENT, os statements já vêm indentados corretamente.
+        Precisamos apenas processá-los mantendo a indentação.
+        """
         result_lines = []
         for stmt in statements:
             if stmt:
+                # Ignorar tokens INDENT/DEDENT/_NEWLINE - já foram processados
+                if isinstance(stmt, str) and stmt.strip() in ['INDENT', 'DEDENT', '_NEWLINE', '']:
+                    continue
+                
                 # Se for Tree object, transformar recursivamente
                 if not isinstance(stmt, str):
                     if hasattr(stmt, 'children'):
@@ -113,29 +134,15 @@ class MythonTransformer(Transformer):
                 if not stmt.strip():
                     continue
                 
-                # Se stmt parece ser uma string quebrada em caracteres, tentar corrigir
-                if '\n' in stmt:
-                    stmt_lines = stmt.split('\n')
-                    # Verificar se TODAS as linhas não vazias têm exatamente 1 caractere APÓS strip
-                    # Isso indica que é uma string realmente quebrada, não código normal
-                    non_empty = [line.strip() for line in stmt_lines if line.strip()]
-                    if non_empty and all(len(line) == 1 for line in non_empty):
-                        # É uma string quebrada - juntar e adicionar indentação
-                        joined = "".join(non_empty)
-                        # Verificar se juntando forma código Python válido
-                        if any(keyword in joined for keyword in ['print', '=', '(', ')', '"', "'", 'if', 'else', 'def', 'class']):
-                            result_lines.append(self.indent() + joined)
-                            continue
-                
-                # Dividir em linhas e processar normalmente (preservar linhas completas)
+                # Processar statement com indentação correta
+                # O indent_level já está ajustado pelos tokens INDENT/DEDENT
                 lines = stmt.split('\n')
                 for line in lines:
                     stripped = line.strip()
                     if stripped:
-                        # Adicionar indentação apropriada
+                        # Adicionar indentação apropriada baseada no indent_level atual
                         result_lines.append(self.indent() + stripped)
         
-        self.indent_level -= 1
         result = "\n".join(result_lines)
         return result if result_lines else ""
     
@@ -144,7 +151,9 @@ class MythonTransformer(Transformer):
     # ============================================
     
     def say_stmt(self, args: List[Any]) -> str:
-        """say/print/show/display/tell"""
+        """say - ULTRA SIMPLES: apenas "say" """
+        # args[0] = expr
+        # args[-1] = _NEWLINE (ignorar)
         expr = self._expr(args[0])
         # Se expr parece ser uma string quebrada (múltiplas linhas de um caractere), tentar corrigir
         if isinstance(expr, str):
@@ -156,130 +165,172 @@ class MythonTransformer(Transformer):
                 if non_empty and all(len(line) == 1 for line in non_empty):
                     # Juntar todas as linhas
                     expr = "".join(non_empty)
-        # Não adicionar indentação aqui - o block fará isso
-        return f"print({expr})"
+        # Retornar com indentação atual
+        return self.indent() + f"print({expr})"
     
     # ============================================
     # Entrada
     # ============================================
     
     def ask_stmt(self, args: List[Any]) -> str:
-        """ask/get/read/prompt"""
+        """
+        ask - ULTRA SIMPLES: apenas "ask" + opcional "number"
+        ask name = input() ou ask name number = int(input())
+        """
+        # args[0] = NAME
+        # args[1] = opcional "number" (Token)
+        # args[2] = opcional STRING (prompt)
+        # args[-1] = _NEWLINE (ignorar)
+        
         var_name = args[0].value if isinstance(args[0], Token) else self._expr(args[0])
-        prompt = self._expr(args[1]) if len(args) > 1 and args[1] else '""'
-        return self.indent() + f'{var_name} = input({prompt})'
-    
-    def ask_number_stmt(self, args: List[Any]) -> str:
-        """ask number/get number/read number"""
-        var_name = args[0].value if isinstance(args[0], Token) else self._expr(args[0])
-        prompt = self._expr(args[1]) if len(args) > 1 and args[1] else '""'
-        return self.indent() + f'{var_name} = int(input({prompt}))'
+        
+        # Verificar se tem "number" ou STRING (prompt)
+        is_number = False
+        prompt = '""'
+        
+        for arg in args[1:]:
+            # Ignorar _NEWLINE
+            if hasattr(arg, 'type') and arg.type == '_NEWLINE':
+                continue
+            
+            # Verificar se é "number"
+            if isinstance(arg, Token) and arg.value == "number":
+                is_number = True
+            # Se é STRING, é o prompt
+            elif hasattr(arg, 'type') and arg.type == 'STRING':
+                prompt = self._expr(arg)
+        
+        # Gerar código
+        if is_number:
+            return self.indent() + f'{var_name} = int(input({prompt}))'
+        else:
+            return self.indent() + f'{var_name} = input({prompt})'
     
     # ============================================
     # Condições
     # ============================================
     
     def if_stmt(self, args: List[Any]) -> str:
-        """if/when/whenever - SIMPLIFICADO: normalização já foi feita antes do parsing"""
+        """if/when/whenever - Com INDENT/DEDENT, os blocos já vêm estruturados corretamente."""
         if not args or len(args) < 1:
             return ""
         
-        # A condição já foi normalizada antes do parsing, então processar a árvore condition
+        # args[0] = condition
+        # args[1] = _NEWLINE token (ignorar)
+        # args[2] = INDENT token (processar - incrementa indent_level)
+        # args[3:-1] = statements do bloco
+        # args[-1] = DEDENT token (processar - decrementa indent_level)
+        
+        # Processar condição
         cond_tree = args[0]
-        # Se cond_tree tem children, processar usando condition() ou transformar diretamente
         if hasattr(cond_tree, 'children') and cond_tree.children:
-            # Tentar transformar a árvore condition diretamente
             try:
                 condition = self.transform(cond_tree)
                 if not isinstance(condition, str):
-                    # Se não retornou string, usar _expr para extrair
                     condition = self._expr(cond_tree)
             except:
                 condition = self._expr(cond_tree)
         else:
             condition = self._expr(cond_tree)
         
-        block = self.block(args[1]) if len(args) > 1 and args[1] else ""
+        # Processar statements do bloco (pular _NEWLINE, INDENT e DEDENT)
+        statements = []
+        for arg in args[1:]:
+            # Ignorar tokens de controle
+            if isinstance(arg, str):
+                if arg.strip() in ['INDENT', 'DEDENT', '_NEWLINE']:
+                    continue
+            # Verificar se é um Token
+            if hasattr(arg, 'type'):
+                if arg.type in ['INDENT', 'DEDENT', '_NEWLINE']:
+                    if arg.type == 'INDENT':
+                        self.indent_level += 1
+                    elif arg.type == 'DEDENT':
+                        self.indent_level -= 1
+                    continue
+            statements.append(arg)
+        
+        # Construir o bloco
+        block = self.block(statements) if statements else ""
+        
+        # Construir resultado
         result = self.indent() + f"if {condition}:"
         if block:
-            # Garantir que block é uma string e não está quebrada
-            if not isinstance(block, str):
-                block = str(block)
-            # Se block parece ser uma string quebrada em caracteres (TODAS linhas = 1 char), tentar corrigir
-            if '\n' in block:
-                block_lines = block.split('\n')
-                # Verificar se TODAS as linhas não vazias têm exatamente 1 caractere APÓS strip
-                non_empty = [line.strip() for line in block_lines if line.strip()]
-                if non_empty and all(len(line) == 1 for line in non_empty):
-                    # É uma string realmente quebrada - juntar e adicionar indentação
-                    joined = "".join(non_empty)
-                    if any(keyword in joined for keyword in ['print', '=', '(', ')', '"', "'", 'if', 'else']):
-                        block = self.indent() + joined
-                # Se não está quebrado, preservar o block como está (já tem indentação do método block)
-            # Adicionar block ao resultado (preservando indentação)
             result += "\n" + block
+        
         return result
     
     def elif_stmt(self, args: List[Any]) -> str:
-        """elif/else if/or if - SIMPLIFICADO: normalização já foi feita antes do parsing"""
+        """elif/else if/or if - Com INDENT/DEDENT, os blocos já vêm estruturados corretamente."""
         if not args or len(args) < 1:
             return ""
         
-        # A condição já foi normalizada antes do parsing, então processar a árvore condition
+        # Processar condição
         cond_tree = args[0]
-        # Se cond_tree tem children, processar usando condition() ou transformar diretamente
         if hasattr(cond_tree, 'children') and cond_tree.children:
-            # Tentar transformar a árvore condition diretamente
             try:
                 condition = self.transform(cond_tree)
                 if not isinstance(condition, str):
-                    # Se não retornou string, usar _expr para extrair
                     condition = self._expr(cond_tree)
             except:
                 condition = self._expr(cond_tree)
         else:
             condition = self._expr(cond_tree)
         
-        block = self.block(args[1]) if len(args) > 1 and args[1] else ""
+        # Processar statements do bloco (pular _NEWLINE, INDENT e DEDENT)
+        statements = []
+        for arg in args[1:]:
+            # Ignorar tokens de controle
+            if isinstance(arg, str):
+                if arg.strip() in ['INDENT', 'DEDENT', '_NEWLINE']:
+                    continue
+            # Verificar se é um Token
+            if hasattr(arg, 'type'):
+                if arg.type in ['INDENT', 'DEDENT', '_NEWLINE']:
+                    if arg.type == 'INDENT':
+                        self.indent_level += 1
+                    elif arg.type == 'DEDENT':
+                        self.indent_level -= 1
+                    continue
+            statements.append(arg)
+        
+        # Construir o bloco
+        block = self.block(statements) if statements else ""
+        
+        # Construir resultado
         result = self.indent() + f"elif {condition}:"
         if block:
-            # Garantir que block é uma string e não está quebrada
-            if not isinstance(block, str):
-                block = str(block)
-            # Se block parece ser uma string quebrada em caracteres (TODAS linhas = 1 char), tentar corrigir
-            if '\n' in block:
-                block_lines = block.split('\n')
-                non_empty = [line.strip() for line in block_lines if line.strip()]
-                if non_empty and all(len(line) == 1 for line in non_empty):
-                    # É uma string realmente quebrada - juntar e adicionar indentação
-                    joined = "".join(non_empty)
-                    if any(keyword in joined for keyword in ['print', '=', '(', ')', '"', "'", 'if', 'else']):
-                        block = self.indent() + joined
-                # Se não está quebrado, preservar o block como está
-            # Adicionar block ao resultado (preservando indentação)
             result += "\n" + block
+        
         return result
     
     def else_stmt(self, args: List[Any]) -> str:
-        """else/otherwise - SIMPLIFICADO: normalização já foi feita antes do parsing"""
-        block = self.block(args[0]) if len(args) > 0 and args[0] else ""
+        """else/otherwise - Com INDENT/DEDENT, os blocos já vêm estruturados corretamente."""
+        # args[0] = _NEWLINE (ignorar)
+        # args[1] = INDENT token (ignorar)
+        # args[2:] = statements do bloco (até DEDENT)
+        # args[-1] = DEDENT token (ignorar)
+        
+        # Processar statements do bloco (pular INDENT/DEDENT/_NEWLINE)
+        statements = []
+        for arg in args:
+            if isinstance(arg, str):
+                if arg.strip() in ['INDENT', 'DEDENT', '_NEWLINE']:
+                    continue
+            statements.append(arg)
+        
+        # Remover DEDENT do final se presente
+        if statements and isinstance(statements[-1], str) and statements[-1].strip() == 'DEDENT':
+            statements = statements[:-1]
+        
+        # Construir o bloco
+        block = self.block(statements) if statements else ""
+        
+        # Construir resultado
         result = self.indent() + "else:"
         if block:
-            # Garantir que block é uma string e não está quebrada
-            if not isinstance(block, str):
-                block = str(block)
-            # Se block parece ser uma string quebrada em caracteres (TODAS linhas = 1 char), tentar corrigir
-            if '\n' in block:
-                block_lines = block.split('\n')
-                non_empty = [line.strip() for line in block_lines if line.strip()]
-                if non_empty and all(len(line) == 1 for line in non_empty):
-                    # É uma string realmente quebrada - juntar e adicionar indentação
-                    joined = "".join(non_empty)
-                    if any(keyword in joined for keyword in ['print', '=', '(', ')', '"', "'", 'if', 'else']):
-                        block = self.indent() + joined
-                # Se não está quebrado, preservar o block como está
-            # Adicionar block ao resultado (preservando indentação)
             result += "\n" + block
+        
         return result
     
     def _condition(self, cond: Any) -> str:

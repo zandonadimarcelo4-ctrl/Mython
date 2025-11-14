@@ -40,38 +40,78 @@ def get_translation(word: str, lang: str = "en") -> str:
         return dictionary[word_no_accents]
     return word  # Retorna a palavra original se não encontrar
 
-def translate_code(code: str, lang: str = "en", reverse: bool = False) -> str:
+def translate_code(code: str, lang: str = "en", reverse: bool = False, source_lang: str = None) -> str:
     """
-    Traduz código Mython de uma língua para outra.
+    Traduz código Mython de uma língua para outra (bidirecional).
     
     Args:
         code: Código Mython
         lang: Código da língua de destino (pt, es, fr, etc.)
         reverse: Se True, traduz de volta para inglês (de lang para en)
+        source_lang: Código da língua de origem (None = detectar automaticamente)
     
     Returns:
         Código traduzido
     """
+    # Se não é reverse e destino é inglês, não traduzir
     if lang == "en" and not reverse:
         return code
     
-    dictionary = load_dictionary(lang)
-    if not dictionary:
+    # Se source_lang não foi especificado, detectar automaticamente
+    if source_lang is None:
+        source_lang = detect_language(code)
+    
+    # Se source_lang == lang, não traduzir
+    if source_lang == lang and not reverse:
         return code
+    
+    # Se reverse, traduzir de lang para en
+    if reverse:
+        dictionary = load_dictionary(lang)
+        if not dictionary:
+            return code
+    else:
+        # Traduzir de source_lang (geralmente en) para lang
+        # Se source_lang é en, usar dicionário normal
+        if source_lang == "en":
+            dictionary = load_dictionary(lang)
+            if not dictionary:
+                return code
+        else:
+            # Se source_lang não é en, primeiro traduzir para en, depois para lang
+            # Mas isso é complexo, vamos fazer direto do source_lang para lang
+            # Carregar dicionário de source_lang e criar inverso
+            source_dict = load_dictionary(source_lang)
+            target_dict = load_dictionary(lang)
+            if not source_dict or not target_dict:
+                return code
+            
+            # Criar mapeamento: source_lang -> en -> lang
+            # Primeiro, traduzir source_lang para en (inverso)
+            inverted_source = {v: k for k, v in source_dict.items()}
+            # Depois, traduzir en para lang
+            # Criar dicionário composto: source_lang -> lang
+            dictionary = {}
+            for source_word, en_word in inverted_source.items():
+                if en_word in target_dict:
+                    dictionary[source_word] = target_dict[en_word]
+            
+            if not dictionary:
+                return code
     
     lines = code.split('\n')
     translated_lines = []
     
-    # Se reverse, criar dicionário invertido
+    # Se reverse, criar dicionário invertido (lang -> en)
     if reverse:
         # Criar dicionário invertido básico
         inverted_dict = {v: k for k, v in dictionary.items()}
         # Adicionar versões sem acentos para facilitar tradução
         # Se a palavra tem acento, adicionar versão sem acento que aponta para a mesma tradução
-        for word_pt, word_en in list(inverted_dict.items()):
-            word_pt_no_accents = remove_accents(word_pt)
-            if word_pt_no_accents != word_pt and word_pt_no_accents not in inverted_dict:
-                inverted_dict[word_pt_no_accents] = word_en
+        for word_lang, word_en in list(inverted_dict.items()):
+            word_lang_no_accents = remove_accents(word_lang)
+            if word_lang_no_accents != word_lang and word_lang_no_accents not in inverted_dict:
+                inverted_dict[word_lang_no_accents] = word_en
         dictionary = inverted_dict
         if not dictionary:
             return code
@@ -145,7 +185,7 @@ def detect_language(code: str) -> str:
     Detecta automaticamente a língua do código Mython.
     
     Analisa palavras-chave únicas de cada língua para determinar
-    qual língua está sendo usada.
+    qual língua está sendo usada. Reconhece português, inglês e outras línguas.
     
     Args:
         code: Código Mython a analisar
@@ -157,7 +197,9 @@ def detect_language(code: str) -> str:
     language_keywords = {
         "pt": ["dizer", "perguntar", "senão", "se", "é", "repetir", "enquanto", 
                "para", "cada", "lista", "adicionar", "remover", "definir", 
-               "retornar", "classe", "tarefa", "tentar", "capturar", "sempre"],
+               "retornar", "classe", "tarefa", "tentar", "capturar", "sempre",
+               "senao", "senao",  # sem acentos
+               "perguntar número", "número"],  # combinações comuns
         "es": ["decir", "preguntar", "sino", "si", "es", "repetir", "mientras",
                "para", "cada", "lista", "añadir", "eliminar", "definir",
                "devolver", "clase", "tarea", "intentar", "capturar", "siempre"],
@@ -172,6 +214,10 @@ def detect_language(code: str) -> str:
                "restituire", "classe", "compito", "provare", "catturare", "sempre"],
     }
     
+    # Palavras-chave do Mython em inglês (para distinguir de código Python puro)
+    mython_keywords = ["say", "ask", "repeat", "define", "class", "if", "else", 
+                       "for", "while", "def", "return", "try", "except"]
+    
     # Contar ocorrências de palavras-chave de cada língua
     import re
     code_lower = code.lower()
@@ -181,6 +227,14 @@ def detect_language(code: str) -> str:
     words_in_code = re.findall(r'\b\w+\b', code_lower)
     words_normalized = {w: remove_accents(w) for w in words_in_code}
     
+    # Verificar palavras-chave Mython em inglês
+    has_mython_keywords = any(kw in words_in_code for kw in mython_keywords)
+    
+    # Se tem palavras-chave Mython mas não tem palavras de outras línguas, é inglês
+    if has_mython_keywords:
+        scores["en"] = len([kw for kw in mython_keywords if kw in words_in_code])
+    
+    # Verificar outras línguas
     for lang, keywords in language_keywords.items():
         score = 0
         for keyword in keywords:
@@ -198,16 +252,15 @@ def detect_language(code: str) -> str:
                         score += 1
         
         if score > 0:
-            scores[lang] = score
+            scores[lang] = scores.get(lang, 0) + score
     
-    # Se não encontrou nenhuma palavra-chave, assumir inglês
+    # Se não encontrou nenhuma palavra-chave, assumir inglês (código Mython padrão)
     if not scores:
         return "en"
     
     # Retornar a língua com maior score
     detected_lang = max(scores.items(), key=lambda x: x[1])[0]
     
-    # Retornar a língua detectada (mesmo que seja apenas 1 palavra)
-    # Se detectou alguma palavra-chave, provavelmente está correto
+    # Retornar a língua detectada
     return detected_lang
 

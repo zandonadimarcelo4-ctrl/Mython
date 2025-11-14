@@ -1,0 +1,121 @@
+// Gramática Ultra Simplificada para Mython
+// Máximo de simplicidade, mínimo de palavras-chave
+// Inspirado no Moonscript mas MUITO mais simples
+
+%declare INDENT DEDENT _NEWLINE
+
+?start: statement+
+
+?statement: simple_stmt
+         | compound_stmt
+
+// Statements simples (máximo de simplicidade)
+simple_stmt: say_stmt _NEWLINE
+           | ask_stmt _NEWLINE
+           | assignment_stmt _NEWLINE
+           | return_stmt _NEWLINE
+           | break_stmt _NEWLINE
+           | continue_stmt _NEWLINE
+           | pass_stmt _NEWLINE
+           | python_escape _NEWLINE
+
+// Statements compostos (apenas o essencial)
+compound_stmt: if_stmt
+             | else_stmt
+             | for_stmt
+             | while_stmt
+             | repeat_stmt
+             | def_stmt
+             | class_stmt
+             | try_stmt
+             | except_stmt
+
+// ============================================
+// COMANDOS BÁSICOS (1 palavra-chave cada)
+// ============================================
+
+// Dizer/Imprimir (apenas "say")
+say_stmt: "say" expr
+
+// Perguntar (apenas "ask" + opcional "number")
+ask_stmt: "ask" NAME ("number")? STRING?
+         | "ask" NAME ("number")?
+
+// ============================================
+// ATRIBUIÇÃO (sem palavra-chave, apenas =)
+// ============================================
+
+assignment_stmt: NAME "=" expr
+
+// ============================================
+// CONTROLE DE FLUXO (mínimo essencial)
+// ============================================
+
+// Se (apenas "if", sem "when" ou "whenever")
+if_stmt: "if" condition ":" _NEWLINE INDENT statement+ DEDENT
+else_stmt: "else" ":" _NEWLINE INDENT statement+ DEDENT
+
+// Loops (3 formas: for, while, repeat)
+for_stmt: "for" NAME "in" expr ":" _NEWLINE INDENT statement+ DEDENT
+while_stmt: "while" condition ":" _NEWLINE INDENT statement+ DEDENT
+repeat_stmt: "repeat" NUMBER ":" _NEWLINE INDENT statement+ DEDENT
+
+// ============================================
+// FUNÇÕES (apenas "def")
+// ============================================
+
+def_stmt: "def" NAME "(" params? ")" ":" _NEWLINE INDENT statement+ DEDENT
+return_stmt: "return" expr?
+
+// ============================================
+// CLASSES (apenas "class" + "def")
+// ============================================
+
+class_stmt: "class" NAME ":" _NEWLINE INDENT statement+ DEDENT
+
+// ============================================
+// ERROS (apenas "try" e "except")
+// ============================================
+
+try_stmt: "try" ":" _NEWLINE INDENT statement+ DEDENT
+except_stmt: "except" ":" _NEWLINE INDENT statement+ DEDENT
+
+// ============================================
+// CONTROLE (essenciais)
+// ============================================
+
+break_stmt: "break"
+continue_stmt: "continue"
+pass_stmt: "pass"
+
+// ============================================
+// EXPRESSÕES (simplificadas)
+// ============================================
+
+condition: expr comparison expr
+         | expr ("is" | "is" "not" | "is" "over" | "is" "under" | "is" "at" "least" | "is" "at" "most") expr
+
+comparison: ">" | "<" | ">=" | "<=" | "==" | "!="
+
+?expr: term (("+" | "-") term)*
+?term: factor (("*" | "/" | "//" | "%" | "**") factor)*
+?factor: NUMBER | STRING | NAME | "(" expr ")" | function_call | attribute_access | subscription
+
+function_call: NAME "(" args? ")"
+args: expr ("," expr)*
+
+attribute_access: NAME "." NAME
+subscription: NAME "[" expr "]"
+
+params: NAME ("," NAME)*
+
+// Python puro (escape)
+python_escape: /(?!^\s*(say|ask|if|else|for|while|repeat|def|class|try|except|return|break|continue|pass)\b).+/
+
+// Terminais
+NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
+NUMBER: /\d+(\.\d+)?/
+STRING: /"[^"]*"|'[^']*'|f"[^"]*"|f'[^']*'/
+
+%import common.WS
+

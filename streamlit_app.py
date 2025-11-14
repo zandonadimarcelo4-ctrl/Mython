@@ -25,6 +25,16 @@ except ImportError:
     I18N_AVAILABLE = False
     SUPPORTED_LANGUAGES = {"en": "English"}
 
+# Flags de idiomas para a interface
+lang_flags = {
+    "en": "🇺🇸",
+    "pt": "🇧🇷",
+    "es": "🇪🇸",
+    "fr": "🇫🇷",
+    "de": "🇩🇪",
+    "it": "🇮🇹",
+}
+
 # Configuração da página
 st.set_page_config(
     page_title="Mython IDE",
@@ -125,22 +135,15 @@ with st.sidebar:
         Strings literais e variáveis **não** são traduzidas.
         """)
         
-        # Seletor de idioma
-        lang_flags = {
-            "en": "🇺🇸",
-            "pt": "🇧🇷",
-            "es": "🇪🇸",
-            "fr": "🇫🇷",
-            "de": "🇩🇪",
-            "it": "🇮🇹",
-        }
-        
         lang_options = ["Automático (Detectar)"] + list(SUPPORTED_LANGUAGES.keys())
+        
+        # Definir lang_flags localmente para garantir acesso
+        local_lang_flags = lang_flags
         
         def format_lang(option):
             if option == "Automático (Detectar)":
                 return "🔍 Automático (Detectar)"
-            flag = lang_flags.get(option, "🌍")
+            flag = local_lang_flags.get(option, "🌍")
             name = SUPPORTED_LANGUAGES.get(option, option)
             return f"{flag} {name}"
         
@@ -270,8 +273,7 @@ with header_col2:
         current_lang = st.session_state.get("code_language", None)
         if current_lang:
             lang_name = SUPPORTED_LANGUAGES.get(current_lang, current_lang)
-            lang_flags_map = {"en": "🇺🇸", "pt": "🇧🇷", "es": "🇪🇸", "fr": "🇫🇷", "de": "🇩🇪", "it": "🇮🇹"}
-            flag = lang_flags_map.get(current_lang, "🌍")
+            flag = lang_flags.get(current_lang, "🌍")
             st.info(f"{flag} {lang_name}")
 
 # Inicializar código se não existir
@@ -302,7 +304,7 @@ mython_code = st.text_area(
 st.session_state.mython_code = mython_code
 
 # Botões de ação
-col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
+col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 
 with col1:
     transpile_btn = st.button("🔄 Transpilar", type="primary", use_container_width=True)
@@ -314,7 +316,74 @@ with col3:
     save_btn = st.button("💾 Salvar .py", use_container_width=True)
 
 with col4:
+    translate_btn = st.button("🌍 Traduzir", use_container_width=True)
+
+with col5:
     clear_btn = st.button("🗑️ Limpar", use_container_width=True)
+
+# Detectar idioma automaticamente e mostrar
+if I18N_AVAILABLE and mython_code.strip():
+    try:
+        auto_detected = detect_language(mython_code)
+        if auto_detected:
+            lang_name = SUPPORTED_LANGUAGES.get(auto_detected, auto_detected)
+            flag = lang_flags.get(auto_detected, "🌍")
+            
+            # Mostrar badge de idioma detectado
+            st.info(f"{flag} **Idioma detectado:** {lang_name}")
+                
+            # Se o usuário não selecionou manualmente, usar o detectado
+            if st.session_state.get("code_language") is None:
+                if auto_detected != "en":
+                    st.session_state.code_language = auto_detected
+    except:
+        pass  # Ignorar erros na detecção
+
+# Traduzir código para outra língua
+if translate_btn and I18N_AVAILABLE and mython_code.strip():
+    st.markdown("---")
+    st.subheader("🌍 Traduzir Código")
+    
+    col_trans1, col_trans2 = st.columns(2)
+    
+    with col_trans1:
+        translate_target = st.selectbox(
+            "Traduzir para:",
+            options=list(SUPPORTED_LANGUAGES.keys()),
+            format_func=lambda x: f"{lang_flags.get(x, '🌍')} {SUPPORTED_LANGUAGES.get(x, x)}",
+            key="translate_target_lang"
+        )
+    
+    with col_trans2:
+        if st.button("✅ Traduzir", use_container_width=True, key="translate_execute"):
+            try:
+                # Detectar idioma atual
+                detected_source = detect_language(mython_code)
+                
+                # Traduzir
+                if detected_source == translate_target:
+                    st.warning("⚠️ O código já está no idioma selecionado!")
+                else:
+                    if detected_source == "en":
+                        # Traduzir de inglês para outra língua
+                        translated_code = translate_code(mython_code, lang=translate_target, reverse=False)
+                    elif translate_target == "en":
+                        # Traduzir de outra língua para inglês
+                        translated_code = translate_code(mython_code, lang=detected_source, reverse=True)
+                    else:
+                        # Traduzir de uma língua para outra (via inglês)
+                        # Primeiro para inglês, depois para destino
+                        code_en = translate_code(mython_code, lang=detected_source, reverse=True)
+                        translated_code = translate_code(code_en, lang=translate_target, reverse=False)
+                    
+                    # Atualizar editor com código traduzido
+                    st.session_state.mython_code = translated_code
+                    st.session_state.code_language = translate_target
+                    st.success(f"✅ Código traduzido para {SUPPORTED_LANGUAGES.get(translate_target, translate_target)}!")
+                    st.rerun()
+                    
+            except Exception as e:
+                st.error(f"❌ Erro ao traduzir: {str(e)}")
 
 # Limpar código
 if clear_btn:
@@ -372,10 +441,12 @@ if transpile_btn or run_btn:
             if I18N_AVAILABLE:
                 if lang_to_use and lang_to_use != "en":
                     lang_name = SUPPORTED_LANGUAGES.get(lang_to_use, lang_to_use)
-                    success_msg += f" 🌍 (Código em {lang_name})"
+                    flag = lang_flags.get(lang_to_use, "🌍")
+                    success_msg += f" {flag} (Código em {lang_name})"
                 elif detected_lang and detected_lang != "en":
                     lang_name = SUPPORTED_LANGUAGES.get(detected_lang, detected_lang)
-                    success_msg += f" 🌍 (Idioma detectado: {lang_name})"
+                    flag = lang_flags.get(detected_lang, "🌍")
+                    success_msg += f" {flag} (Idioma detectado: {lang_name})"
             
             if LARK_AVAILABLE:
                 success_msg += " (Lark - 99% Python)"
@@ -444,7 +515,8 @@ if "python_code" in st.session_state or python_code:
                 capture_output=True,
                 text=True,
                 timeout=10,
-                encoding='utf-8'
+                encoding='utf-8',
+                errors='replace'  # Substituir caracteres inválidos ao invés de falhar
             )
             
             # Limpar arquivo temporário
