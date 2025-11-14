@@ -3,7 +3,17 @@ Transformer para converter AST do Lark em código Python.
 """
 
 from lark import Transformer, Token, Tree
-from typing import List, Any
+from typing import List, Any, Optional
+
+# Importar sistema de macros modular
+try:
+    from mython.macros import registry as macro_registry
+    from mython.macros.base import MacroError
+    MACROS_AVAILABLE = True
+except ImportError:
+    MACROS_AVAILABLE = False
+    macro_registry = None
+    MacroError = None
 
 
 class MythonTransformer(Transformer):
@@ -79,10 +89,11 @@ class MythonTransformer(Transformer):
     
     def simple_stmt(self, children: List[Any]) -> str:
         """
-        simple_stmt: say_stmt | ask_stmt | assign_stmt | ...
+        simple_stmt: say_stmt | ask_stmt | assign_stmt | ... | macro_stmt
         
         CORRIGIDO: Apenas retorna o resultado do filho.
         NÃO chama self.transform() - o Lark já transformou o filho.
+        Se for macro, expande usando o sistema de macros.
         """
         if not children:
             return ""
@@ -94,10 +105,28 @@ class MythonTransformer(Transformer):
             return ""
         
         # O primeiro child já foi transformado pelo Lark em string
-        # Apenas retornar
         result = filtered[0]
         
-        # Se ainda é Tree (não deveria acontecer), converter para string
+        # Verificar se é macro (Tree com data começando com "macro_")
+        if isinstance(result, Tree) and result.data.startswith("macro_"):
+            # Processar macro usando o sistema de macros
+            if MACROS_AVAILABLE and macro_registry:
+                try:
+                    macro_code = macro_registry.expand_macro(
+                        result.data,
+                        result.children,
+                        result,
+                        transformer=self  # Passar transformer para processar expressões
+                    )
+                    return macro_code
+                except Exception as e:
+                    # Se falhar, retornar erro ou código Python de fallback
+                    return f"# ERRO MACRO: {str(e)}\n"
+            else:
+                # Se macros não disponíveis, retornar como string
+                return str(result)
+        
+        # Se ainda é Tree (não deveria acontecer para outros casos), converter para string
         if isinstance(result, Tree):
             return str(result)
         

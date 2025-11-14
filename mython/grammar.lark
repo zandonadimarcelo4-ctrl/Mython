@@ -26,6 +26,7 @@
 // ULTRA SIMPLES: apenas o essencial
 // IMPORTANTE: Ordem importa - mais específicos primeiro (say antes de python_escape)
 // IMPORTANTE: _NEWLINE foi movido para o nível de statement para permitir blocos INDENT/DEDENT
+// IMPORTANTE: Macros devem estar ANTES de outros statements para precedência (adicionadas dinamicamente pelo transpiler)
 simple_stmt: say_stmt
            | ask_stmt
            | assign_stmt

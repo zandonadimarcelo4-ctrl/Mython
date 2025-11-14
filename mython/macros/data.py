@@ -23,12 +23,14 @@ class DataScienceMacros(MacroBase):
         - `filter NAME where column STRING is over expr` → Filtrar dataframe
         - `group NAME by STRING` → Agrupar dataframe
         - `sum NAME by STRING` → Somar agrupado
+        
+        IMPORTANTE: Usar palavras-chave específicas para evitar conflitos.
         """
         return {
-            "load_file": 'LOAD STRING "into" NAME',
-            "filter_data": 'FILTER NAME "where" "column" STRING comparison_op expr',
-            "group_data": 'GROUP NAME "by" STRING ("as" NAME)?',
-            "sum_data": 'SUM NAME "by" STRING ("as" NAME)?',
+            "load_file": '"load" STRING "into" NAME',
+            "filter_data": '"filter" NAME "where" "column" STRING comparison_op expr',
+            "group_data": '"group" NAME "by" STRING ("as" NAME)?',
+            "sum_data": '"sum" NAME "by" STRING ("as" NAME)?',
         }
     
     def expand(self, pattern_name: str, args: List[Any], tree: Tree) -> str:
@@ -46,7 +48,7 @@ class DataScienceMacros(MacroBase):
         else:
             raise MacroError(f"Padrão desconhecido: {pattern_name}")
     
-    def _expand_load_file(self, args: List[Any]) -> str:
+    def _expand_load_file(self, args: List[Any], transformer=None) -> str:
         """Expande load "file.csv" into data"""
         file_path = None
         var_name = None
@@ -74,7 +76,7 @@ class DataScienceMacros(MacroBase):
             # Tentar CSV por padrão
             return f"{var_name} = pd.read_csv({file_path})"
     
-    def _expand_filter_data(self, args: List[Any]) -> str:
+    def _expand_filter_data(self, args: List[Any], transformer=None) -> str:
         """Expande filter data where column "age" is over 18"""
         df_name = None
         column = None
@@ -119,7 +121,7 @@ class DataScienceMacros(MacroBase):
         python_op = op_map.get(operator, operator)
         return f"{df_name} = {df_name}[{df_name}[{column}] {python_op} {value}]"
     
-    def _expand_group_data(self, args: List[Any]) -> str:
+    def _expand_group_data(self, args: List[Any], transformer=None) -> str:
         """Expande group data by "category" as grouped"""
         df_name = None
         column = None
@@ -144,7 +146,7 @@ class DataScienceMacros(MacroBase):
         result_var = var_name or f"{df_name}_grouped"
         return f"{result_var} = {df_name}.groupby({column})"
     
-    def _expand_sum_data(self, args: List[Any]) -> str:
+    def _expand_sum_data(self, args: List[Any], transformer=None) -> str:
         """Expande sum data by "category" as summed"""
         df_name = None
         column = None

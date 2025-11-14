@@ -27,6 +27,14 @@ except ImportError:
     translate_keywords = None
     get_available_translators = None
 
+# Importar sistema de macros modular
+try:
+    from .macros import registry as macro_registry
+    MACROS_AVAILABLE = True
+except ImportError:
+    MACROS_AVAILABLE = False
+    macro_registry = None
+
 
 def auto_fstring(code: str) -> str:
     """
@@ -526,6 +534,25 @@ def transpile_string(code: str, lang: str = None, use_hybrid_translator: bool = 
     
     with open(grammar_path, 'r', encoding='utf-8') as f:
         grammar = f.read()
+    
+    # Adicionar regras de macros à gramática se disponível
+    if MACROS_AVAILABLE and macro_registry:
+        macro_rules = macro_registry.get_grammar_rules()
+        if macro_rules:
+            # Adicionar regras de macros antes de simple_stmt
+            # IMPORTANTE: Macros devem estar antes de outros statements para precedência
+            macro_grammar = "\n".join(["\n// Macros (geradas dinamicamente)"] + macro_rules + [""])
+            
+            # Criar regra macro_stmt que agrupa todas as macros
+            macro_stmt_rule = "macro_stmt: " + " | ".join([rule.split(":")[0] for rule in macro_rules]) + "\n"
+            
+            # Inserir antes de simple_stmt
+            if "simple_stmt:" in grammar:
+                # Encontrar a linha simple_stmt: e inserir antes
+                grammar = grammar.replace(
+                    "simple_stmt:",
+                    macro_grammar + macro_stmt_rule + "\nsimple_stmt: macro_stmt\n           | "
+                )
     
     # Criar parser com indenter para processar indentação estilo Python
     parser = Lark(

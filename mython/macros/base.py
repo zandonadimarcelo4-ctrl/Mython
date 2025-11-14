@@ -46,7 +46,7 @@ class MacroBase(ABC):
         pass
     
     @abstractmethod
-    def expand(self, pattern_name: str, args: List[Any], tree: Tree) -> str:
+    def expand(self, pattern_name: str, args: List[Any], tree: Tree, transformer=None) -> str:
         """
         Expande um padrão macro em código Python.
         
@@ -54,6 +54,7 @@ class MacroBase(ABC):
             pattern_name: Nome do padrão (chave do dicionário retornado por get_patterns)
             args: Lista de argumentos parseados da árvore
             tree: Árvore completa do padrão (para contexto)
+            transformer: Instância do transformer para processar expressões (opcional)
         
         Returns:
             Código Python gerado
@@ -132,7 +133,7 @@ class MacroRegistry:
         """
         return self.patterns.get(rule_name)
     
-    def expand_macro(self, rule_name: str, args: List[Any], tree: Tree) -> str:
+    def expand_macro(self, rule_name: str, args: List[Any], tree: Tree, transformer=None) -> str:
         """
         Expande uma macro em código Python.
         
@@ -140,6 +141,7 @@ class MacroRegistry:
             rule_name: Nome da regra (ex: "macro_get_data_from")
             args: Argumentos parseados
             tree: Árvore completa
+            transformer: Instância do transformer para processar expressões (opcional)
         
         Returns:
             Código Python gerado
@@ -159,7 +161,7 @@ class MacroRegistry:
         
         # Expandir
         try:
-            return macro.expand(pattern_name, args, tree)
+            return macro.expand(pattern_name, args, tree, transformer)
         except Exception as e:
             raise MacroError(f"Erro ao expandir macro {pattern_name}: {str(e)}")
     

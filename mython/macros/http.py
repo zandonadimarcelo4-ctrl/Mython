@@ -33,22 +33,28 @@ class HTTPMacros(MacroBase):
             "delete_from": 'DELETE "from" STRING ("as" NAME)?',
         }
     
-    def expand(self, pattern_name: str, args: List[Any], tree: Tree) -> str:
+    def expand(self, pattern_name: str, args: List[Any], tree: Tree, transformer=None) -> str:
         """
         Expande padrão HTTP em código Python.
+        
+        Args:
+            pattern_name: Nome do padrão
+            args: Lista de argumentos parseados
+            tree: Árvore completa
+            transformer: Instância do transformer para processar expressões (opcional)
         """
         if pattern_name == "get_data_from":
-            return self._expand_get_data(args)
+            return self._expand_get_data(args, transformer)
         elif pattern_name == "get_text_from":
-            return self._expand_get_text(args)
+            return self._expand_get_text(args, transformer)
         elif pattern_name == "post_data_to":
-            return self._expand_post_data(args)
+            return self._expand_post_data(args, transformer)
         elif pattern_name == "post_text_to":
-            return self._expand_post_text(args)
+            return self._expand_post_text(args, transformer)
         elif pattern_name == "put_data_to":
-            return self._expand_put_data(args)
+            return self._expand_put_data(args, transformer)
         elif pattern_name == "delete_from":
-            return self._expand_delete(args)
+            return self._expand_delete(args, transformer)
         else:
             raise MacroError(f"Padrão desconhecido: {pattern_name}")
     
@@ -102,9 +108,9 @@ class HTTPMacros(MacroBase):
         # Implementação simplificada - na prática, usar o transformer
         return str(tree.children[0]) if tree.children else ""
     
-    def _expand_get_data(self, args: List[Any]) -> str:
+    def _expand_get_data(self, args: List[Any], transformer=None) -> str:
         """Expande GET data from "url" as var_name"""
-        extracted = self._extract_args(args)
+        extracted = self._extract_args(args, transformer)
         url = extracted["url"]
         var_name = extracted.get("var_name", "response")
         
@@ -113,9 +119,9 @@ class HTTPMacros(MacroBase):
         
         return f"{var_name} = requests.get({url}).json()"
     
-    def _expand_get_text(self, args: List[Any]) -> str:
+    def _expand_get_text(self, args: List[Any], transformer=None) -> str:
         """Expande GET text from "url" as var_name"""
-        extracted = self._extract_args(args)
+        extracted = self._extract_args(args, transformer)
         url = extracted["url"]
         var_name = extracted.get("var_name", "response")
         
@@ -124,9 +130,9 @@ class HTTPMacros(MacroBase):
         
         return f"{var_name} = requests.get({url}).text"
     
-    def _expand_post_data(self, args: List[Any]) -> str:
+    def _expand_post_data(self, args: List[Any], transformer=None) -> str:
         """Expande POST data to "url" with {"key": "value"} as var_name"""
-        extracted = self._extract_args(args)
+        extracted = self._extract_args(args, transformer)
         url = extracted["url"]
         var_name = extracted.get("var_name", "response")
         data = extracted.get("data")
@@ -139,9 +145,9 @@ class HTTPMacros(MacroBase):
         else:
             return f"{var_name} = requests.post({url}).json()"
     
-    def _expand_post_text(self, args: List[Any]) -> str:
+    def _expand_post_text(self, args: List[Any], transformer=None) -> str:
         """Expande POST text to "url" with "body" as var_name"""
-        extracted = self._extract_args(args)
+        extracted = self._extract_args(args, transformer)
         url = extracted["url"]
         var_name = extracted.get("var_name", "response")
         data = extracted.get("data")
@@ -154,9 +160,9 @@ class HTTPMacros(MacroBase):
         else:
             return f"{var_name} = requests.post({url}).text"
     
-    def _expand_put_data(self, args: List[Any]) -> str:
+    def _expand_put_data(self, args: List[Any], transformer=None) -> str:
         """Expande PUT data to "url" with {"key": "value"} as var_name"""
-        extracted = self._extract_args(args)
+        extracted = self._extract_args(args, transformer)
         url = extracted["url"]
         var_name = extracted.get("var_name", "response")
         data = extracted.get("data")
@@ -169,9 +175,9 @@ class HTTPMacros(MacroBase):
         else:
             return f"{var_name} = requests.put({url}).json()"
     
-    def _expand_delete(self, args: List[Any]) -> str:
+    def _expand_delete(self, args: List[Any], transformer=None) -> str:
         """Expande DELETE from "url" as var_name"""
-        extracted = self._extract_args(args)
+        extracted = self._extract_args(args, transformer)
         url = extracted["url"]
         var_name = extracted.get("var_name", "response")
         
