@@ -1190,11 +1190,55 @@ class MythonTransformer(Transformer):
     # Atribuições
     # ============================================
     
+    def assign_stmt(self, children: List[Any]) -> str:
+        """
+        assign_stmt: NAME "=" expr
+        
+        CORRIGIDO: Processa NAME e expr já transformados.
+        NÃO chama self.transform() - o Lark já transformou os filhos.
+        """
+        if not children or len(children) < 2:
+            return ""
+        
+        # Filtrar tokens "="
+        filtered = [c for c in children if not (isinstance(c, Token) and c.value == '=')]
+        
+        if len(filtered) < 2:
+            return ""
+        
+        # Primeiro é NAME, segundo é expr (já transformado)
+        var_name = None
+        expr_value = None
+        
+        # Primeiro arg é NAME
+        name_arg = filtered[0]
+        if isinstance(name_arg, Token) and name_arg.type == 'NAME':
+            var_name = name_arg.value
+        elif isinstance(name_arg, str):
+            var_name = name_arg
+        else:
+            var_name = str(name_arg)
+        
+        # Segundo arg é expr (já transformado)
+        expr_arg = filtered[1]
+        if isinstance(expr_arg, Token):
+            expr_value = self._expr(expr_arg)
+        else:
+            # Se já é string, usar diretamente
+            expr_value = str(expr_arg)
+        
+        # Valor padrão
+        if not var_name:
+            var_name = "value"
+        if not expr_value:
+            expr_value = ""
+        
+        # Retornar com indentação atual
+        return self.indent() + f"{var_name} = {expr_value}"
+    
     def assignment_stmt(self, args: List[Any]) -> str:
-        """set/assign/let/make/put/store/save/create/initialize"""
-        var_name = args[0].value if isinstance(args[0], Token) else str(args[0])
-        value = self._expr(args[1])
-        return self.indent() + f"{var_name} = {value}"
+        """Alias para assign_stmt - compatibilidade"""
+        return self.assign_stmt(args)
     
     def augmented_assignment_stmt(self, args: List[Any]) -> str:
         """+=/-=/*=//= etc"""
