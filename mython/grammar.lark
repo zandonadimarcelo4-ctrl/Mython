@@ -51,6 +51,7 @@ simple_stmt: say_stmt
            | lambda_stmt
            | save_file_stmt
            | read_file_stmt
+           | call_stmt
            // python_escape  // TEMPORARIAMENTE DESABILITADO PARA DEBUG
 
 // Statements compostos (abrem blocos indentados) - não terminam com _NEWLINE
@@ -184,10 +185,20 @@ walrus_stmt: NAME ":=" expr
 type_hint_stmt: NAME ":" type_annotation ("=" expr)?
 type_annotation: NAME | "int" | "str" | "float" | "bool" | "list" | "dict" | "tuple" | "set" | "None"
 
+// Chamada de função simples (sem atribuição)
+call_stmt: function_call
+
 // Expressões - ULTRA SIMPLIFICADAS para evitar ambiguidade
 // IMPORTANTE: Restringir ao mínimo para garantir que o parser saiba quando a expressão termina
-?condition: comparison
-          | atom
+?condition: logical_or
+
+// Operadores lógicos (precedência: not > and > or)
+?logical_or: logical_and
+           | logical_or OR logical_and -> or_expr
+?logical_and: logical_not
+            | logical_and AND logical_not -> and_expr
+?logical_not: comparison
+           | NOT comparison -> not_expr
 
 // Comparação simples: NAME comparison_op atom
 comparison: atom comparison_op atom
@@ -291,6 +302,9 @@ CONTINUE: "continue"
 PASS: "pass"
 REPEAT: "repeat"
 UNTIL: "until"
+AND: "and"
+OR: "or"
+NOT: "not"
 
 // NAME por último (captura o que sobrou - variáveis, funções, etc.)
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/

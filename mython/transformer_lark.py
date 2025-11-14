@@ -261,6 +261,35 @@ class MythonTransformer(Transformer):
         return result if result_lines else ""
     
     # ============================================
+    # Chamada de Função
+    # ============================================
+    
+    def call_stmt(self, children: List[Any]) -> str:
+        """
+        call_stmt: function_call
+        
+        CORRIGIDO: Permite chamar funções diretamente sem atribuição.
+        Exemplo: requests.post("https://api.example.com", data=data)
+        """
+        if not children:
+            return ""
+        
+        # O primeiro child é a chamada de função já transformada
+        call_expr = children[0]
+        
+        # Se já é string, retornar com indentação
+        if isinstance(call_expr, str):
+            return self.indent() + call_expr
+        
+        # Se é Tree, transformar para string
+        if isinstance(call_expr, Tree):
+            call_str = self._expr(call_expr)
+            return self.indent() + call_str
+        
+        # Fallback: converter para string
+        return self.indent() + str(call_expr)
+    
+    # ============================================
     # Saída
     # ============================================
     
@@ -907,6 +936,45 @@ class MythonTransformer(Transformer):
         # Se é string, retornar diretamente
         return str(children[0])
     
+    # ============================================
+    # Operadores Lógicos
+    # ============================================
+    
+    def or_expr(self, children: List[Any]) -> str:
+        """
+        or_expr: logical_or OR logical_and
+        
+        CORRIGIDO: Retorna expressão com operador or.
+        """
+        if len(children) < 2:
+            return self._expr(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"({left} or {right})"
+    
+    def and_expr(self, children: List[Any]) -> str:
+        """
+        and_expr: logical_and AND comparison
+        
+        CORRIGIDO: Retorna expressão com operador and.
+        """
+        if len(children) < 2:
+            return self._expr(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"({left} and {right})"
+    
+    def not_expr(self, children: List[Any]) -> str:
+        """
+        not_expr: NOT comparison
+        
+        CORRIGIDO: Retorna expressão com operador not.
+        """
+        if not children:
+            return ""
+        expr = self._expr(children[0])
+        return f"(not {expr})"
+    
     def condition(self, args: List[Any]) -> str:
         """
         condition: comparison | atom
@@ -1073,16 +1141,25 @@ class MythonTransformer(Transformer):
             
             # Se não é Token e ainda não temos func_name, processar params
             if func_name and not params_str:
-                # Params pode ser Tree ou lista de Tokens
-                if hasattr(arg, 'children'):
-                    # É Tree (params), processar
+                # Params pode ser Tree com data='params' ou string já transformada
+                if isinstance(arg, Tree) and arg.data == 'params':
+                    # É Tree de params, processar usando método params
+                    params_str = self.params(arg.children)
+                elif hasattr(arg, 'children'):
+                    # É Tree genérico (params), processar children
                     params_list = []
                     for child in arg.children:
+                        # Filtrar vírgulas
+                        if isinstance(child, Token) and child.value == ',':
+                            continue
                         if isinstance(child, Token) and child.type == 'NAME':
                             params_list.append(child.value)
                         elif isinstance(child, str):
                             params_list.append(child)
                     params_str = ", ".join(params_list)
+                elif isinstance(arg, str):
+                    # Se já é string, pode ser lista de params já transformada
+                    params_str = arg
                 elif isinstance(arg, list):
                     # É lista de params
                     params_list = []
@@ -1091,15 +1168,6 @@ class MythonTransformer(Transformer):
                             params_list.append(p.value)
                         elif isinstance(p, str):
                             params_list.append(p)
-                    params_str = ", ".join(params_list)
-                elif isinstance(arg, Tree) and arg.data == 'params':
-                    # É Tree de params, processar children
-                    params_list = []
-                    for child in arg.children:
-                        if isinstance(child, Token) and child.type == 'NAME':
-                            params_list.append(child.value)
-                        elif isinstance(child, str):
-                            params_list.append(child)
                     params_str = ", ".join(params_list)
                 i += 1
                 continue
