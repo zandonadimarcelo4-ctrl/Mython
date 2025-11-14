@@ -55,6 +55,26 @@ def normalize_condition(text: str) -> str:
     return result
 
 
+def translate_expression(
+    expression: str,
+    in_class: bool = False,
+    has_staticmethod: bool = False,
+    has_classmethod: bool = False,
+) -> str:
+    """Traduz pequenas expressões reutilizando a lógica do transpiler."""
+    expr = expression.strip()
+    if not expr:
+        return expr
+
+    translated = translate_line(
+        expr,
+        in_class=in_class,
+        has_staticmethod=has_staticmethod,
+        has_classmethod=has_classmethod,
+    )
+    return translated.strip()
+
+
 def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = False, has_classmethod: bool = False) -> str:
     """
     Traduz uma linha de código .logic para Python.
@@ -91,7 +111,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             content = stripped[len("display "):]
         else:  # tell
             content = stripped[len("tell "):]
-        return indent + f"print({content})"
+        content_py = translate_expression(
+            content,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"print({content_py})"
     
     # ask number / ask for number / get number / read number
     if stripped.startswith("ask number ") or stripped.startswith("ask for number ") or stripped.startswith("get number ") or stripped.startswith("read number "):
@@ -159,7 +185,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
         else:  # whenever
             condition_text = stripped[len("whenever "):-1]
         condition_py = normalize_condition(condition_text)
-        return indent + f"if {condition_py}:"
+        condition_expr = translate_expression(
+            condition_py,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"if {condition_expr}:"
     
     # else / otherwise
     if stripped == "else:" or stripped == "otherwise:":
@@ -174,7 +206,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
         else:  # or if
             condition_text = stripped[len("or if "):-1]
         condition_py = normalize_condition(condition_text)
-        return indent + f"elif {condition_py}:"
+        condition_expr = translate_expression(
+            condition_py,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"elif {condition_expr}:"
     
     # repeat / do / loop
     if (stripped.startswith("repeat ") or stripped.startswith("do ") or stripped.startswith("loop ")) and (" times:" in stripped or " time:" in stripped):
@@ -190,7 +228,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             middle = base[:-len(" times:")].strip()
         else:  # time:
             middle = base[:-len(" time:")].strip()
-        return indent + f"for _ in range({middle}):"
+        middle_expr = translate_expression(
+            middle,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"for _ in range({middle_expr}):"
     
     # list / create list / make list
     if stripped.startswith("list ") or stripped.startswith("create list ") or stripped.startswith("make list "):
@@ -221,10 +265,16 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             else:
                 before, after = stripped.split(" into ", 1)
                 before = before.split()[-1] if " " in before else before
-        
+
         value = before.strip()
         list_name = after.strip()
-        return indent + f"{list_name}.append({value})"
+        value_expr = translate_expression(
+            value,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"{list_name}.append({value_expr})"
     
     # remove from list / delete from / take out from
     if (stripped.startswith("remove ") or stripped.startswith("delete ") or stripped.startswith("take out ")) and " from " in stripped:
@@ -237,7 +287,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             before, after = stripped[len("take out "):].split(" from ", 1)
         value = before.strip()
         list_name = after.strip()
-        return indent + f"{list_name}.remove({value})"
+        value_expr = translate_expression(
+            value,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"{list_name}.remove({value_expr})"
     
     # for each / for every / loop through / iterate over
     if ((stripped.startswith("for each ") or stripped.startswith("for every ") or stripped.startswith("loop through ") or stripped.startswith("iterate over ")) and " in " in stripped and stripped.endswith(":")) or (stripped.startswith("for ") and " in " in stripped and stripped.endswith(":") and not stripped.startswith("for each")):
@@ -247,31 +303,59 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
         elif stripped.startswith("for every "):
             middle = stripped[len("for every "):-1]
         elif stripped.startswith("loop through "):
-            # loop through names as name:
+            middle = stripped[len("loop through "):-1]
             if " as " in middle:
-                middle = stripped[len("loop through "):-1]
                 list_name, var_name = [p.strip() for p in middle.split(" as ", 1)]
-                return indent + f"for {var_name} in {list_name}:"
+                list_expr = translate_expression(
+                    list_name,
+                    in_class=in_class,
+                    has_staticmethod=has_staticmethod,
+                    has_classmethod=has_classmethod,
+                )
+                return indent + f"for {var_name} in {list_expr}:"
             else:
-                middle = stripped[len("loop through "):-1]
                 list_name = middle.strip()
                 var_name = "item"
-                return indent + f"for {var_name} in {list_name}:"
+                list_expr = translate_expression(
+                    list_name,
+                    in_class=in_class,
+                    has_staticmethod=has_staticmethod,
+                    has_classmethod=has_classmethod,
+                )
+                return indent + f"for {var_name} in {list_expr}:"
         elif stripped.startswith("iterate over "):
             # iterate over names as name:
             middle = stripped[len("iterate over "):-1]
             if " as " in middle:
                 list_name, var_name = [p.strip() for p in middle.split(" as ", 1)]
-                return indent + f"for {var_name} in {list_name}:"
+                list_expr = translate_expression(
+                    list_name,
+                    in_class=in_class,
+                    has_staticmethod=has_staticmethod,
+                    has_classmethod=has_classmethod,
+                )
+                return indent + f"for {var_name} in {list_expr}:"
             else:
                 list_name = middle.strip()
                 var_name = "item"
-                return indent + f"for {var_name} in {list_name}:"
+                list_expr = translate_expression(
+                    list_name,
+                    in_class=in_class,
+                    has_staticmethod=has_staticmethod,
+                    has_classmethod=has_classmethod,
+                )
+                return indent + f"for {var_name} in {list_expr}:"
         else:  # for ... in ...:
             middle = stripped[len("for "):-1]
-        
+
         var_name, list_name = [p.strip() for p in middle.split(" in ", 1)]
-        return indent + f"for {var_name} in {list_name}:"
+        list_expr = translate_expression(
+            list_name,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"for {var_name} in {list_expr}:"
     
     # define / function / to / create function
     if (stripped.startswith("define ") or stripped.startswith("function ") or stripped.startswith("to ") or stripped.startswith("create function ")) and stripped.endswith(":"):
@@ -294,7 +378,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             value = stripped[len("give back "):]
         else:  # send back
             value = stripped[len("send back "):]
-        return indent + f"return {value}"
+        value_expr = translate_expression(
+            value,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"return {value_expr}"
     
     # wait / pause / sleep / delay
     if (stripped.startswith("wait ") or stripped.startswith("pause ") or stripped.startswith("sleep ") or stripped.startswith("delay ")) and (" seconds" in stripped or " second" in stripped):
@@ -312,7 +402,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             number = base[:-len(" seconds")].strip()
         else:  # second
             number = base[:-len(" second")].strip()
-        return indent + f"time.sleep({number})"
+        number_expr = translate_expression(
+            number,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"time.sleep({number_expr})"
     
     # random number from A to B / random between A and B / pick random number from A to B / get random number from A to B
     if ("random number from " in stripped or "random between " in stripped or "pick random number from " in stripped or "get random number from " in stripped) and (" to " in stripped or " and " in stripped):
@@ -323,12 +419,36 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             if random_part.strip().startswith("random number from "):
                 middle = random_part.strip()[len("random number from "):]
                 left, right = [p.strip() for p in middle.split(" to ", 1)]
-                return indent + f"{var_name} = random.randint({left}, {right})"
+                left_expr = translate_expression(
+                    left,
+                    in_class=in_class,
+                    has_staticmethod=has_staticmethod,
+                    has_classmethod=has_classmethod,
+                )
+                right_expr = translate_expression(
+                    right,
+                    in_class=in_class,
+                    has_staticmethod=has_staticmethod,
+                    has_classmethod=has_classmethod,
+                )
+                return indent + f"{var_name} = random.randint({left_expr}, {right_expr})"
         # Caso 2: sozinho: random number from 1 to 10
         elif stripped.startswith("random number from "):
             middle = stripped[len("random number from "):]
             left, right = [p.strip() for p in middle.split(" to ", 1)]
-            return indent + f"random.randint({left}, {right})"
+            left_expr = translate_expression(
+                left,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            right_expr = translate_expression(
+                right,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            return indent + f"random.randint({left_expr}, {right_expr})"
     
     # save text to file / write to file / save to file / store in file
     if (stripped.startswith("save text ") or stripped.startswith("write ") or stripped.startswith("save ") or stripped.startswith("store ")) and (" to file " in stripped or " into file " in stripped or " in file " in stripped):
@@ -369,7 +489,22 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
         if len(parts) == 2:
             text_content = parts[0].strip()
             file_path = parts[1].strip()
-            return indent + f'with open({file_path}, "w", encoding="utf-8") as f:\n{indent}    f.write(str({text_content}))'
+            text_expr = translate_expression(
+                text_content,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            path_expr = translate_expression(
+                file_path,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            return (
+                indent
+                + f'with open({path_expr}, "w", encoding="utf-8") as f:\n{indent}    f.write(str({text_expr}))'
+            )
     
     # read file / load file / get from file
     if (stripped.startswith("read file ") or stripped.startswith("load file ") or stripped.startswith("get from file ")) and " as " in stripped:
@@ -385,7 +520,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
         if len(parts) == 2:
             file_path = parts[0].strip()
             var_name = parts[1].strip()
-            return indent + f'with open({file_path}, "r", encoding="utf-8") as f:\n{indent}    {var_name} = f.read()'
+            path_expr = translate_expression(
+                file_path,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            return indent + f'with open({path_expr}, "r", encoding="utf-8") as f:\n{indent}    {var_name} = f.read()'
     
     # class (com ou sem herança)
     if stripped.startswith("class ") and stripped.endswith(":"):
@@ -414,7 +555,14 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
         # set x = 10
         assignment = stripped[len("set "):]
         if " = " in assignment:
-            return indent + assignment
+            target, value = assignment.split(" = ", 1)
+            value_expr = translate_expression(
+                value,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            return indent + f"{target.strip()} = {value_expr}"
     
     # task (método/função)
     if stripped.startswith("task ") and stripped.endswith(":"):
@@ -581,7 +729,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
         else:  # continue while
             condition = stripped[len("continue while "):-1]
         condition_py = normalize_condition(condition)
-        return indent + f"while {condition_py}:"
+        condition_expr = translate_expression(
+            condition_py,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"while {condition_expr}:"
     
     # break / stop / exit loop / leave loop / quit loop
     if stripped == "break" or stripped == "stop" or stripped == "exit loop" or stripped == "leave loop" or stripped == "quit loop":
@@ -606,7 +760,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
         # assert condition
         condition = stripped[len("assert "):]
         condition_py = normalize_condition(condition)
-        return indent + f"assert {condition_py}"
+        condition_expr = translate_expression(
+            condition_py,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"assert {condition_expr}"
     
     # lambda (expressão)
     if " => " in stripped:
@@ -746,39 +906,53 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             if len(range_part) == 2:
                 start = range_part[0].strip()
                 end = range_part[1].strip()
-                return indent + f"{var_name}[{start}:{end}]"
+                start_expr = translate_expression(
+                    start,
+                    in_class=in_class,
+                    has_staticmethod=has_staticmethod,
+                    has_classmethod=has_classmethod,
+                )
+                end_expr = translate_expression(
+                    end,
+                    in_class=in_class,
+                    has_staticmethod=has_staticmethod,
+                    has_classmethod=has_classmethod,
+                )
+                return indent + f"{var_name}[{start_expr}:{end_expr}]"
     
     # set / assign / let / make / put / store / save / create / initialize (atribuição simples)
     # IMPORTANTE: Verificar antes do fallback final
     if " = " in stripped and not stripped.startswith("if ") and not stripped.startswith("elif ") and not stripped.startswith("for ") and not stripped.startswith("while ") and not stripped.startswith("when ") and not stripped.startswith("whenever ") and not stripped.startswith("list ") and not stripped.startswith("dict ") and not stripped.startswith("tuple ") and not stripped.startswith("set ") and not stripped.startswith("create list ") and not stripped.startswith("create dict ") and not stripped.startswith("create tuple ") and not stripped.startswith("create set ") and not stripped.startswith("make list ") and not stripped.startswith("make dict ") and not stripped.startswith("make tuple ") and not stripped.startswith("make set "):
         # set x = 10 / assign x = 10 / let x = 10 / make x = 10 / put x = 50 / store x = 60 / save x = 70 / create x = 80 / initialize x = 90
+        assignment = None
         if stripped.startswith("set "):
             assignment = stripped[len("set "):]
-            return indent + assignment
         elif stripped.startswith("assign "):
             assignment = stripped[len("assign "):]
-            return indent + assignment
         elif stripped.startswith("let "):
             assignment = stripped[len("let "):]
-            return indent + assignment
         elif stripped.startswith("make ") and not stripped.startswith("make list ") and not stripped.startswith("make dict ") and not stripped.startswith("make tuple ") and not stripped.startswith("make set ") and not stripped.startswith("make class "):
             assignment = stripped[len("make "):]
-            return indent + assignment
         elif stripped.startswith("put ") and " into " not in stripped and " to " not in stripped:
             assignment = stripped[len("put "):]
-            return indent + assignment
         elif stripped.startswith("store ") and " in file " not in stripped and " in " not in stripped:
             assignment = stripped[len("store "):]
-            return indent + assignment
         elif stripped.startswith("save ") and " to file " not in stripped and " in file " not in stripped:
             assignment = stripped[len("save "):]
-            return indent + assignment
         elif stripped.startswith("create ") and not stripped.startswith("create list ") and not stripped.startswith("create dict ") and not stripped.startswith("create tuple ") and not stripped.startswith("create set ") and not stripped.startswith("create class ") and not stripped.startswith("create function "):
             assignment = stripped[len("create "):]
-            return indent + assignment
         elif stripped.startswith("initialize "):
             assignment = stripped[len("initialize "):]
-            return indent + assignment
+
+        if assignment:
+            target, value = assignment.split(" = ", 1)
+            value_expr = translate_expression(
+                value,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            return indent + f"{target.strip()} = {value_expr}"
     
     # ============================================
     # MACROS E ATALHOS COMUNS (Palavras Simples)
@@ -843,7 +1017,19 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             parts = stripped[len("separate "):].split(" by ", 1)
         if len(parts) == 2:
             string_name, separator = parts[0].strip(), parts[1].strip()
-            return indent + f"{string_name}.split({separator})"
+            string_expr = translate_expression(
+                string_name,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            separator_expr = translate_expression(
+                separator,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            return indent + f"{string_expr}.split({separator_expr})"
     
     # uppercase string / to uppercase string
     if stripped.startswith("uppercase ") or stripped.startswith("to uppercase "):
@@ -851,7 +1037,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             var_name = stripped[len("uppercase "):].strip()
         else:  # to uppercase
             var_name = stripped[len("to uppercase "):].strip()
-        return indent + f"{var_name}.upper()"
+        var_expr = translate_expression(
+            var_name,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"{var_expr}.upper()"
     
     # lowercase string / to lowercase string
     if stripped.startswith("lowercase ") or stripped.startswith("to lowercase "):
@@ -859,7 +1051,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             var_name = stripped[len("lowercase "):].strip()
         else:  # to lowercase
             var_name = stripped[len("to lowercase "):].strip()
-        return indent + f"{var_name}.lower()"
+        var_expr = translate_expression(
+            var_name,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"{var_expr}.lower()"
     
     # length of list / size of list / count items in list
     if (stripped.startswith("length of ") or stripped.startswith("size of ") or stripped.startswith("count items in ")):
@@ -869,17 +1067,35 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             var_name = stripped[len("size of "):].strip()
         else:  # count items in
             var_name = stripped[len("count items in "):].strip()
-        return indent + f"len({var_name})"
+        var_expr = translate_expression(
+            var_name,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"len({var_expr})"
     
     # Operações de lista comuns
     # first item in list / last item in list
     if stripped.startswith("first item in ") or stripped.startswith("last item in "):
         if stripped.startswith("first item in "):
             var_name = stripped[len("first item in "):].strip()
-            return indent + f"{var_name}[0]"
+            var_expr = translate_expression(
+                var_name,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            return indent + f"{var_expr}[0]"
         else:  # last item in
             var_name = stripped[len("last item in "):].strip()
-            return indent + f"{var_name}[-1]"
+            var_expr = translate_expression(
+                var_name,
+                in_class=in_class,
+                has_staticmethod=has_staticmethod,
+                has_classmethod=has_classmethod,
+            )
+            return indent + f"{var_expr}[-1]"
     
     # reverse list / flip list
     if stripped.startswith("reverse ") or stripped.startswith("flip "):
@@ -887,7 +1103,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             var_name = stripped[len("reverse "):].strip()
         else:  # flip
             var_name = stripped[len("flip "):].strip()
-        return indent + f"list(reversed({var_name}))"
+        var_expr = translate_expression(
+            var_name,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"list(reversed({var_expr}))"
     
     # sort list / order list
     if stripped.startswith("sort ") or stripped.startswith("order "):
@@ -895,7 +1117,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             var_name = stripped[len("sort "):].strip()
         else:  # order
             var_name = stripped[len("order "):].strip()
-        return indent + f"sorted({var_name})"
+        var_expr = translate_expression(
+            var_name,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"sorted({var_expr})"
     
     # Operações de arquivo comuns
     # exists file "path" / file exists "path"
@@ -904,7 +1132,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             file_path = stripped[len("exists file "):].strip()
         else:  # file exists
             file_path = stripped[len("file exists "):].strip()
-        return indent + f"os.path.exists({file_path})"
+        path_expr = translate_expression(
+            file_path,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"os.path.exists({path_expr})"
     
     # delete file "path" / remove file "path"
     if (stripped.startswith("delete file ") or stripped.startswith("remove file ")):
@@ -912,7 +1146,13 @@ def translate_line(line: str, in_class: bool = False, has_staticmethod: bool = F
             file_path = stripped[len("delete file "):].strip()
         else:  # remove file
             file_path = stripped[len("remove file "):].strip()
-        return indent + f"os.remove({file_path})"
+        path_expr = translate_expression(
+            file_path,
+            in_class=in_class,
+            has_staticmethod=has_staticmethod,
+            has_classmethod=has_classmethod,
+        )
+        return indent + f"os.remove({path_expr})"
     
     # Operações de data/hora comuns
     # current time / now / current date
@@ -1000,6 +1240,9 @@ def transpile_file(input_path: str, output_path: str = None) -> str:
     needs_async = False
     needs_transformers = False
     needs_torch = False
+    needs_os = False
+    needs_datetime = False
+    needs_sys = False
     
     # Rastrear contexto (se estamos dentro de uma classe)
     in_class = False
@@ -1009,7 +1252,9 @@ def transpile_file(input_path: str, output_path: str = None) -> str:
     for i, line in enumerate(lines):
         stripped = line.strip()
         indent_size = len(line) - len(line.lstrip(" "))
-        
+        lowered = stripped.lower()
+        tokens = [token.strip(":,()[]") for token in lowered.split()]
+
         # Detectar início/fim de classe
         if stripped.startswith("class ") and stripped.endswith(":"):
             in_class = True
@@ -1026,15 +1271,29 @@ def transpile_file(input_path: str, output_path: str = None) -> str:
         previous_line = stripped
         
         # Detectar uso de os
-        if "exists file " in stripped or "file exists " in stripped or "delete file " in stripped or "remove file " in stripped:
+        if (
+            "exists file " in lowered
+            or "file exists " in lowered
+            or "delete file " in lowered
+            or "remove file " in lowered
+        ):
             needs_os = True
-        
+
         # Detectar uso de datetime
-        if stripped == "current time" or stripped == "now" or stripped == "current date" or stripped == "today":
+        if (
+            "current time" in lowered
+            or "current date" in lowered
+            or "today" in tokens
+            or "now" in tokens
+        ):
             needs_datetime = True
-        
+
         # Detectar uso de sys
-        if stripped == "exit program" or stripped == "quit program" or stripped == "stop program":
+        if (
+            "exit program" in lowered
+            or "quit program" in lowered
+            or "stop program" in lowered
+        ):
             needs_sys = True
         
         # Detectar uso de time
@@ -1063,6 +1322,12 @@ def transpile_file(input_path: str, output_path: str = None) -> str:
     
     # Montar código final
     header: List[str] = []
+    if needs_os:
+        header.append("import os")
+    if needs_datetime:
+        header.append("import datetime")
+    if needs_sys:
+        header.append("import sys")
     if needs_time:
         header.append("import time")
     if needs_random:
