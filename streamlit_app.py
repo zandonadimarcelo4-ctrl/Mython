@@ -104,14 +104,18 @@ with st.sidebar:
     - ✅ Classes: herança, métodos, decorators, magic methods
     - ✅ Async: `async task`, `await`
     - ✅ Exceções: `attempt`, `catch`, `finally`, `raise`
-    - ✅ Macros: matemáticas, strings, listas, arquivos, data/hora
+    - ✅ **Macros Matemáticas:** `add x and y`, `subtract x from y`, `multiply x by y`, `divide x by y`
+    - ✅ **Macros de String:** `join list with "sep"`, `split text by "sep"`, `uppercase text`, `lowercase text`
+    - ✅ **Macros de Lista:** `length of list`, `first item in list`, `last item in list`, `reverse list`, `sort list`
+    - ✅ **Macros de Arquivo:** `file exists path`, `delete file path`
+    - ✅ **Macros de Data/Hora:** `now`, `today`, `current time`, `current date`
+    - ✅ **Macro de Sistema:** `exit program`
+    - ✅ **Macros Data Science:** `load "file.csv" into data`, `describe data`, `show data head 10`, `filter data where column "age" > 18`, `plot data column "price" as bar chart`
     - ✅ set_stmt: sintaxe alternativa para atribuição (`set name = value`)
     - ✅ use_stmt: imports simplificados (`use library`)
     - ✅ list_stmt e dict_stmt: estruturas de dados (`list items = [...]`)
     - ✅ call_stmt: chamadas diretas de função
     - ✅ Operadores lógicos: `and`, `or`, `not`
-    - 🚧 Macros HTTP: `get data from "url"` (em desenvolvimento)
-    - 🚧 Macros Data Science: `load "file.csv" into data` (em desenvolvimento)
     
     ### Comandos Básicos:
     - `say "texto"` → `print("texto")`
@@ -122,6 +126,15 @@ with st.sidebar:
     - `for item in lista:` → `for item in lista:`
     - `repeat 5:` → `for _ in range(5):`
     - `func soma(a, b):` → `def soma(a, b):`
+    
+    ### Macros Naturais:
+    - ➕ **Matemáticas:** `add x and y`, `subtract y from x`, `multiply x by y`, `divide x by y`
+    - 📝 **Strings:** `join list with "sep"`, `split text by ","`, `uppercase text`, `lowercase text`
+    - 📋 **Listas:** `length of list`, `first item in list`, `reverse list`, `sort list`
+    - 📁 **Arquivos:** `file exists path`, `delete file path`
+    - 🕐 **Data/Hora:** `now`, `today`
+    - ⚙️ **Sistema:** `exit program`
+    - 📊 **Data Science:** `load "file.csv" into data`, `describe data`, `show data head 10`, `plot data column "price" as bar chart`
     """)
     
     # Sistema de i18n
@@ -183,7 +196,15 @@ with st.sidebar:
         "Loop Repeat",
         "Função Soma",
         "Loop com Condição",
-        "Operadores Naturais"
+        "Operadores Naturais",
+        "Macros Matemáticas ➕",
+        "Macros de String 📝",
+        "Macros de Lista 📋",
+        "Macros de Arquivo 📁",
+        "Macros de Data/Hora 🕐",
+        "Macro de Sistema ⚙️",
+        "Macros Data Science 📊",
+        "Plot de Dados 📈"
     ]
     
     # Adicionar exemplos em outras línguas se i18n estiver disponível
@@ -397,7 +418,164 @@ if age > 18 and age < 65:
 func greet(person):
     return "Hello, " + person + "!"
 
-say greet(name)'''
+say greet(name)''',
+    
+    "Macros Matemáticas ➕": '''# Macros matemáticas em linguagem natural
+set x = 10
+set y = 5
+
+# Adição
+set result1 = add x and y
+set result2 = sum x and y
+
+# Subtração
+set result3 = subtract y from x
+
+# Multiplicação
+set result4 = multiply x by y
+set result5 = times x by y
+
+# Divisão
+set result6 = divide x by y
+
+say "x = " + str(x)
+say "y = " + str(y)
+say "add x and y = " + str(result1)
+say "subtract y from x = " + str(result3)
+say "multiply x by y = " + str(result4)
+say "divide x by y = " + str(result6)''',
+    
+    "Macros de String 📝": '''# Macros de string em linguagem natural
+list words = ["hello", "world", "mython"]
+set text = "hello,world,mython"
+
+# Join (Unir)
+set joined = join words with " "
+say "Joined: " + joined
+
+# Split (Separar)
+set parts = split text by ","
+say "Parts: " + str(parts)
+
+# Uppercase/Lowercase
+set name = "Mython"
+set upper = uppercase name
+set lower = lowercase name
+
+say "Uppercase: " + upper
+say "Lowercase: " + lower''',
+    
+    "Macros de Lista 📋": '''# Macros de lista em linguagem natural
+list numbers = [3, 1, 4, 1, 5, 9, 2, 6]
+
+# Length/Size/Count
+set len1 = length of numbers
+set len2 = size of numbers
+
+say "Length: " + str(len1)
+
+# First/Last
+set first = first item in numbers
+set last = last item in numbers
+
+say "First: " + str(first)
+say "Last: " + str(last)
+
+# Reverse/Flip
+set reversed = reverse numbers
+
+say "Reversed: " + str(reversed)
+
+# Sort/Order
+set sorted = sort numbers
+
+say "Sorted: " + str(sorted)''',
+    
+    "Macros de Arquivo 📁": '''# Macros de arquivo em linguagem natural
+set file_path = "test.txt"
+
+# Verificar se arquivo existe
+set exists = file exists file_path
+
+say "File exists: " + str(exists)
+
+# Criar arquivo de teste primeiro
+save text "Hello, Mython!" to file file_path
+
+# Verificar novamente
+set exists2 = file exists file_path
+
+say "File exists now: " + str(exists2)
+
+# Ler arquivo
+read file file_path as content
+
+say "Content: " + content''',
+    
+    "Macros de Data/Hora 🕐": '''# Macros de data/hora em linguagem natural
+# Data/hora atual
+set now_time = now
+set today_date = today
+
+say "Current time: " + str(now_time)
+say "Today date: " + str(today_date)
+
+# Usar em condições
+if now_time:
+    say "Time obtained successfully"
+
+if today_date:
+    say "Date obtained successfully"''',
+    
+    "Macro de Sistema ⚙️": '''# Macro de sistema
+say "Program starting..."
+
+say "This will exit the program"
+
+# exit program
+
+# (comentado para não encerrar o Streamlit)
+# exit program''',
+    
+    "Macros Data Science 📊": '''# Macros de Data Science
+# Carregar dados
+load "data.csv" into data
+
+# Descrever dados
+describe data as summary
+
+say "Summary:"
+say summary
+
+# Mostrar primeiras linhas
+show data head 5
+
+# Filtrar dados
+filter data where column "age" > 18
+
+# Agrupar dados
+group data by "category" as grouped
+
+say "Grouped: " + str(grouped)
+
+# Somar agrupado
+sum data by "category" as summed
+
+say "Summed: " + str(summed)''',
+    
+    "Plot de Dados 📈": '''# Plot de dados com pandas + matplotlib
+load "data.csv" into data
+
+# Plot de coluna como gráfico de barras
+plot data column "price" as bar chart
+
+# Plot de coluna como gráfico de linha
+plot data column "sales" as line chart
+
+# Plot de coluna como histograma
+plot data column "age" as hist chart
+
+say "Plots generated!"'''
 }
 
 # Carregar exemplo se selecionado (movido para depois da inicialização)
