@@ -1307,6 +1307,65 @@ class MythonTransformer(Transformer):
         # Retornar com indentação atual
         return self.indent() + f"{var_name} = {expr_value}"
     
+    def set_assign_stmt(self, children: List[Any]) -> str:
+        """
+        set_assign_stmt: SET NAME "=" expr
+        
+        Alternativa mais natural para assign_stmt (set name = value).
+        Mesma funcionalidade de assign_stmt, apenas sintaxe alternativa.
+        """
+        # children: [SET, NAME, "=", expr]
+        # Filtrar tokens SET e "="
+        filtered = [c for c in children if not (isinstance(c, Token) and (c.type == 'SET' or c.value == '='))]
+        
+        if len(filtered) < 2:
+            return ""
+        
+        # Primeiro é NAME, segundo é expr
+        var = filtered[0]
+        value = filtered[1]
+        
+        # Converter NAME
+        var_name = var.value if isinstance(var, Token) else str(var)
+        
+        # Converter expr
+        expr_value = self._expr(value) if not isinstance(value, str) else str(value)
+        
+        # Retornar com indentação atual (mesmo que assign_stmt)
+        return self.indent() + f"{var_name} = {expr_value}"
+    
+    def call_stmt(self, children: List[Any]) -> str:
+        """
+        call_stmt: (NAME | attribute_access) "(" args? ")"
+        
+        Permite chamar funções diretamente sem atribuição.
+        Exemplo: requests.post("https://api.example.com", data=data)
+        """
+        if not children:
+            return ""
+        
+        # Filtrar tokens "(", ")"
+        filtered = [c for c in children if not (isinstance(c, Token) and c.value in ['(', ')'])]
+        
+        if not filtered:
+            return ""
+        
+        # Primeiro é NAME ou attribute_access (função a chamar)
+        func_name = self._expr(filtered[0])
+        
+        # Resto são args (já transformados)
+        if len(filtered) > 1:
+            # Args podem ser Tree com data='args' ou string já transformada
+            if isinstance(filtered[1], Tree) and filtered[1].data == 'args':
+                args_str = self._args(filtered[1].children)
+            elif isinstance(filtered[1], str):
+                args_str = filtered[1]
+            else:
+                args_str = self._args(filtered[1])
+            return self.indent() + f"{func_name}({args_str})"
+        else:
+            return self.indent() + f"{func_name}()"
+    
     def assignment_stmt(self, args: List[Any]) -> str:
         """Alias para assign_stmt - compatibilidade"""
         return self.assign_stmt(args)
@@ -1752,8 +1811,14 @@ class MythonTransformer(Transformer):
     
     def function_call(self, args: List[Any]) -> str:
         """Chamada de função."""
-        func_name = args[0].value if isinstance(args[0], Token) else str(args[0])
-        func_args = self._args(args[1]) if len(args) > 1 and args[1] else ""
+        func_name = self._expr(args[0])
+        if len(args) > 1 and args[1]:
+            if isinstance(args[1], Tree) and args[1].data == 'args':
+                func_args = self._args(args[1].children)
+            else:
+                func_args = self._args(args[1])
+        else:
+            func_args = ""
         return f"{func_name}({func_args})"
     
     def _expr(self, expr: Any) -> str:
@@ -1884,8 +1949,59 @@ class MythonTransformer(Transformer):
         return str(params)
     
     def _args(self, args: Any) -> str:
-        """Converte argumentos para string."""
-        return self._params(args)
+        """
+        Converte argumentos (args) para string.
+        Suporta argumentos posicionais, kwargs (key=value), *args e **kwargs.
+        """
+        if not args:
+            return ""
+        
+        # Se é lista, processar cada item
+        if isinstance(args, list):
+            arg_parts = []
+            for arg in args:
+                # Filtrar vírgulas
+                if isinstance(arg, Token) and arg.value == ',':
+                    continue
+                # Se é Tree, pode ser expr ou kwargs
+                if isinstance(arg, Tree):
+                    # Verificar se é kwargs (NAME "=" expr)
+                    if len(arg.children) >= 3:
+                        # Verificar se tem "=" (kwargs)
+                        has_equal = any(isinstance(c, Token) and c.value == '=' for c in arg.children)
+                        if has_equal:
+                            # É kwargs: NAME "=" expr
+                            filtered = [c for c in arg.children if not (isinstance(c, Token) and c.value == '=')]
+                            if len(filtered) >= 2:
+                                key = filtered[0].value if isinstance(filtered[0], Token) else str(filtered[0])
+                                value = self._expr(filtered[1])
+                                arg_parts.append(f"{key}={value}")
+                            else:
+                                arg_parts.append(self._expr(arg))
+                        else:
+                            # É expr normal
+                            arg_parts.append(self._expr(arg))
+                    else:
+                        # É expr normal
+                        arg_parts.append(self._expr(arg))
+                elif isinstance(arg, Token):
+                    # Se é NAME e não é vírgula, pode ser parte de kwargs
+                    if arg.type == 'NAME':
+                        arg_parts.append(arg.value)
+                    else:
+                        arg_parts.append(str(arg))
+                else:
+                    # É string ou outro tipo
+                    arg_parts.append(str(arg))
+            
+            return ", ".join(arg_parts)
+        
+        # Se é Tree, processar children
+        if isinstance(args, Tree) and hasattr(args, 'children'):
+            return self._args(args.children)
+        
+        # Fallback: converter para string
+        return self._params(args) if args else ""
     
     # ============================================
     # Literais
