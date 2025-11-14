@@ -198,7 +198,9 @@ call_stmt: function_call
 ?logical_and: logical_not
             | logical_and AND logical_not -> and_expr
 ?logical_not: comparison
+           | atom
            | NOT comparison -> not_expr
+           | NOT atom -> not_expr
 
 // Comparação simples: NAME comparison_op atom
 comparison: atom comparison_op atom
@@ -238,7 +240,7 @@ comparison_op: GREATER | LESS | GREATER_EQUAL | LESS_EQUAL | EQUALS | NOT_EQUAL
 // Átomo (valor simples) - já definido acima em condition
 // ?atom: NAME | NUMBER | STRING  // Removido - já definido acima
 
-function_call: NAME "(" args? ")"
+function_call: atom "(" args? ")"
 
 // Argumentos de função
 args: expr ("," expr)*
