@@ -105,6 +105,13 @@ with st.sidebar:
     - ✅ Async: `async task`, `await`
     - ✅ Exceções: `attempt`, `catch`, `finally`, `raise`
     - ✅ Macros: matemáticas, strings, listas, arquivos, data/hora
+    - ✅ set_stmt: sintaxe alternativa para atribuição (`set name = value`)
+    - ✅ use_stmt: imports simplificados (`use library`)
+    - ✅ list_stmt e dict_stmt: estruturas de dados (`list items = [...]`)
+    - ✅ call_stmt: chamadas diretas de função
+    - ✅ Operadores lógicos: `and`, `or`, `not`
+    - 🚧 Macros HTTP: `get data from "url"` (em desenvolvimento)
+    - 🚧 Macros Data Science: `load "file.csv" into data` (em desenvolvimento)
     
     ### Comandos Básicos:
     - `say "texto"` → `print("texto")`
@@ -315,7 +322,82 @@ senão:
 
     dizer "Você é menor"
 
-# O sistema detecta e traduz automaticamente para inglês!'''
+# O sistema detecta e traduz automaticamente para inglês!''',
+    
+    "set_stmt (Sintaxe Alternativa)": '''# set_stmt: sintaxe mais natural para atribuição
+set name = "Mython"
+set age = 25
+set result = age + 5
+
+say name
+say age
+say result''',
+    
+    "use_stmt (Imports Simplificados)": '''# use_stmt: imports simplificados
+use requests
+use json as j
+use math
+
+say "Imports funcionando!"''',
+    
+    "list_stmt e dict_stmt": '''# list_stmt e dict_stmt: estruturas de dados simplificadas
+list items = [1, 2, 3, 4, 5]
+dict data = {"name": "Mython", "version": "1.0", "language": "Python"}
+
+say items
+say data
+
+# Acesso normal
+say items[0]
+say data["name"]''',
+    
+    "call_stmt (Chamadas Diretas)": '''# call_stmt: chamar funções sem atribuição
+# Útil para APIs e bibliotecas
+use requests
+
+# Chamada direta (sem atribuição)
+# requests.get("https://api.example.com")
+
+say "Função chamada!"''',
+    
+    "Operadores Lógicos": '''# Operadores lógicos: and, or, not
+ask number age "Enter your age: "
+
+if age > 18 and age < 65:
+    say "Adult"
+
+if not age < 18:
+    say "Not a minor"
+
+if age < 18 or age >= 65:
+    say "Special category"''',
+    
+    "Função com Parâmetros": '''# Função com múltiplos parâmetros
+func calculate(a, b, c):
+    result = a + b + c
+    return result
+
+say calculate(1, 2, 3)
+say calculate(10, 20, 30)''',
+    
+    "Exemplo Completo": '''# Exemplo combinando várias funcionalidades
+use json
+
+set name = "Mython"
+set age = 25
+
+list items = [1, 2, 3]
+dict config = {"version": "1.0", "author": "Mython Team"}
+
+if age > 18 and age < 65:
+    say "Adult using " + name
+    say "Items: " + str(items)
+    say "Config: " + str(config)
+
+func greet(person):
+    return "Hello, " + person + "!"
+
+say greet(name)'''
 }
 
 # Carregar exemplo se selecionado (movido para depois da inicialização)
