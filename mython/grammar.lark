@@ -186,7 +186,8 @@ type_hint_stmt: NAME ":" type_annotation ("=" expr)?
 type_annotation: NAME | "int" | "str" | "float" | "bool" | "list" | "dict" | "tuple" | "set" | "None"
 
 // Chamada de função simples (sem atribuição)
-call_stmt: function_call
+// IMPORTANTE: Usar NAME ou attribute_access diretamente para evitar conflito com function_call em atom
+call_stmt: (NAME | attribute_access) "(" args? ")"
 
 // Expressões - ULTRA SIMPLIFICADAS para evitar ambiguidade
 // IMPORTANTE: Restringir ao mínimo para garantir que o parser saiba quando a expressão termina
