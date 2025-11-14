@@ -1,0 +1,42 @@
+# Mython - Exemplo de Simplicidade e Poder Avançado
+
+# 1. Chamada de função simples (call_stmt)
+# O comando 'say' é um call_stmt, mas agora podemos chamar qualquer função sem atribuição
+say "Iniciando o programa..."
+
+# 2. Importação simplificada de biblioteca (use_library_stmt)
+# Importa a biblioteca 'requests' para fazer requisições HTTP
+use requests
+
+# Importa 'json' com alias 'j'
+use json as j
+
+# 3. Uso de recursos avançados de forma simples (Python puro embutido)
+# Faz uma requisição HTTP e armazena a resposta
+# O transpiler deve reconhecer 'requests.get' como Python puro
+set response = requests.get("https://jsonplaceholder.typicode.com/todos/1")
+
+# 4. Processamento de dados (call_stmt para método)
+# Chama o método .json() do objeto 'response'
+set data = response.json()
+
+# 5. Lógica simples para exibir o resultado
+say "Dados recebidos:"
+say data
+
+# 6. Uso do alias 'j' para dumps (call_stmt)
+say "Dados formatados:"
+say j.dumps(data, indent=4)
+
+# 7. Condição simples com acesso a dicionário
+if data["completed"] is true:
+    say "Tarefa concluída!"
+else:
+    say "Tarefa pendente."
+
+# 8. Chamada de função com argumentos (call_stmt)
+# Exemplo de função que não retorna nada (apenas executa)
+# O transpiler deve converter isso para uma chamada de função Python
+requests.post("https://jsonplaceholder.typicode.com/posts", data=data)
+
+say "Requisição POST enviada (simulação)."
