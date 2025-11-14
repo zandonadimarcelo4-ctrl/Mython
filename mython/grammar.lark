@@ -57,6 +57,7 @@ simple_stmt: say_stmt
            | read_file_stmt
            | call_stmt
            | set_assign_stmt
+           | system_macro
            // python_escape  // TEMPORARIAMENTE DESABILITADO PARA DEBUG
 
 // Statements compostos (abrem blocos indentados) - não terminam com _NEWLINE
@@ -172,6 +173,56 @@ save_file_stmt: ("save" "text" | "write" | "save" | "store") expr ("to" "file" |
 read_file_stmt: ("read" "file" | "load" "file" | "get" "from" "file") STRING "as" NAME
 open_file_stmt: ("open" | "open" "file" | "read" "file" | "load" "file") STRING "as" NAME ":" _NEWLINE INDENT statement+ DEDENT
 
+// Expressões naturais (macros simplificadas)
+math_macro: math_add
+          | math_subtract
+          | math_multiply
+          | math_divide
+
+math_add: ("add" | "sum" | "plus") expr ("and" | "with") expr
+math_subtract: ("subtract" | "minus") expr "from" expr
+math_multiply: ("multiply" | "times") expr "by" expr
+math_divide: "divide" expr "by" expr
+
+string_macro: string_join
+            | string_split
+            | string_upper
+            | string_lower
+
+string_join: ("join" | "combine") expr ("with" | "using" | "by") expr
+string_split: ("split" | "separate") expr "by" expr
+string_upper: ("uppercase" | "upper") ("text" | "string")? expr
+string_lower: ("lowercase" | "lower") ("text" | "string")? expr
+
+list_macro: list_length
+          | list_first
+          | list_last
+          | list_reverse
+          | list_sort
+
+list_length: ("length" | "size" | "count") ("of" | "for" | "in")? expr
+list_first: "first" ("item" ("in" | "of")?)? expr
+list_last: "last" ("item" ("in" | "of")?)? expr
+list_reverse: ("reverse" | "flip") expr
+list_sort: ("sort" | "order") expr
+
+file_macro: file_exists_macro
+          | file_delete_macro
+
+file_exists_macro: ("exists" "file" expr)
+                 | ("file" "exists" expr)
+file_delete_macro: ("delete" "file" expr)
+                 | ("remove" "file" expr)
+
+date_macro: ("current" "time")
+          | ("current" "date")
+          | "now"
+          | "today"
+
+system_macro: ("exit" "program")
+            | ("quit" "program")
+            | ("stop" "program")
+
 // Imports
 use_stmt: ("use" | "import" | "load" | "require" | "include") NAME ("as" NAME)?
 from_import_stmt: "from" NAME ("import" | "load" | "require") NAME ("as" NAME)?
@@ -226,6 +277,11 @@ comparison: atom comparison_op atom
      | attribute_access
      | subscription
      | list_literal
+     | math_macro
+     | string_macro
+     | list_macro
+     | file_macro
+     | date_macro
 
 // Operadores de comparação Python (suportados após normalize_operators)
 // IMPORTANTE: Definir como terminais para evitar conflitos
@@ -342,6 +398,10 @@ REPEAT: "repeat"
 UNTIL: "until"
 AND: "and"
 OR: "or"
+GET: "get"
+POST: "post"
+PUT: "put"
+DELETE: "delete"
 NOT: "not"
 SET: "set"
 

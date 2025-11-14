@@ -3,7 +3,7 @@ Transformer para converter AST do Lark em código Python.
 """
 
 from lark import Transformer, Token, Tree
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Set
 
 # Importar sistema de macros modular
 try:
@@ -24,6 +24,7 @@ class MythonTransformer(Transformer):
         self.indent_level = 0
         self.in_class = False
         self.source_code = source_code  # Armazenar código original para extrair tokens
+        self.extra_imports: Set[str] = set()
         self.needs_imports = {
             'time': False,
             'random': False,
@@ -64,7 +65,12 @@ class MythonTransformer(Transformer):
             imports.append("import datetime")
         if self.needs_imports['sys']:
             imports.append("import sys")
-        
+
+        if self.extra_imports:
+            for extra_import in sorted(self.extra_imports):
+                if extra_import not in imports:
+                    imports.append(extra_import)
+
         if imports:
             lines.extend(imports)
             lines.append("")
@@ -118,6 +124,10 @@ class MythonTransformer(Transformer):
                         result,
                         transformer=self  # Passar transformer para processar expressões
                     )
+                    imports = macro_registry.get_imports_for_rule(result.data)
+                    if imports:
+                        for extra_import in imports:
+                            self.extra_imports.add(extra_import)
                     return macro_code
                 except Exception as e:
                     # Se falhar, retornar erro ou código Python de fallback
@@ -1574,94 +1584,119 @@ class MythonTransformer(Transformer):
     def macro_stmt(self, args: List[Any]) -> str:
         """Macro (math/string/list/file/date/system)"""
         return args[0] if args else ""
-    
+
+    def _collect_expr_values(self, args: List[Any]) -> List[str]:
+        """Extrai valores de expressão ignorando tokens auxiliares."""
+        values: List[str] = []
+        for arg in args:
+            if isinstance(arg, Token):
+                continue
+            values.append(self._expr(arg))
+        return values
+
     def math_macro(self, args: List[Any]) -> str:
-        """add/sum/plus, subtract/minus, multiply/times, divide"""
-        if len(args) >= 3:
-            op = str(args[1]).lower()
-            if op in ("and", "plus"):
-                return f"({self._expr(args[0])} + {self._expr(args[2])})"
-            elif op == "from":
-                return f"({self._expr(args[2])} - {self._expr(args[0])})"
-            elif op == "by":
-                if "multiply" in str(args[0]).lower() or "times" in str(args[0]).lower():
-                    return f"({self._expr(args[0])} * {self._expr(args[2])})"
-                elif "divide" in str(args[0]).lower():
-                    return f"({self._expr(args[0])} / {self._expr(args[2])})"
-        return self._expr(args[0]) if args else ""
-    
+        """Delegado para regras específicas de operações matemáticas."""
+        return args[0] if args else ""
+
+    def math_add(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        if len(values) >= 2:
+            return f"({values[0]} + {values[1]})"
+        return values[0] if values else ""
+
+    def math_subtract(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        if len(values) >= 2:
+            return f"({values[1]} - {values[0]})"
+        return values[0] if values else ""
+
+    def math_multiply(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        if len(values) >= 2:
+            return f"({values[0]} * {values[1]})"
+        return values[0] if values else ""
+
+    def math_divide(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        if len(values) >= 2:
+            return f"({values[0]} / {values[1]})"
+        return values[0] if values else ""
+
     def string_macro(self, args: List[Any]) -> str:
-        """join/combine, split/separate, uppercase/lowercase"""
-        if len(args) >= 3:
-            # join/combine list with separator
-            if "join" in str(args[0]).lower() or "combine" in str(args[0]).lower():
-                list_name = self._expr(args[0])
-                separator = self._expr(args[2])
-                return f"{separator}.join({list_name})"
-            # split/separate string by separator
-            elif "split" in str(args[0]).lower() or "separate" in str(args[0]).lower():
-                string_name = self._expr(args[0])
-                separator = self._expr(args[2])
-                return f"{string_name}.split({separator})"
-        elif len(args) >= 2:
-            # uppercase/lowercase string
-            var_name = self._expr(args[1])
-            if "uppercase" in str(args[0]).lower():
-                return f"{var_name}.upper()"
-            elif "lowercase" in str(args[0]).lower():
-                return f"{var_name}.lower()"
-        return ""
-    
+        """Delegado para regras específicas de strings."""
+        return args[0] if args else ""
+
+    def string_join(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        if len(values) >= 2:
+            return f"{values[1]}.join({values[0]})"
+        return values[0] if values else ""
+
+    def string_split(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        if len(values) >= 2:
+            return f"{values[0]}.split({values[1]})"
+        return values[0] if values else ""
+
+    def string_upper(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        return f"{values[-1]}.upper()" if values else ""
+
+    def string_lower(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        return f"{values[-1]}.lower()" if values else ""
+
     def list_macro(self, args: List[Any]) -> str:
-        """length/size/count, first/last, reverse/flip, sort/order"""
-        if not args:
-            return ""
-        var_name = self._expr(args[-1])  # Último argumento é sempre a variável
-        
-        # length/size/count
-        if any(x in str(args[0]).lower() for x in ["length", "size", "count"]):
-            return f"len({var_name})"
-        # first item
-        elif "first" in str(args[0]).lower():
-            return f"{var_name}[0]"
-        # last item
-        elif "last" in str(args[0]).lower():
-            return f"{var_name}[-1]"
-        # reverse/flip
-        elif any(x in str(args[0]).lower() for x in ["reverse", "flip"]):
-            return f"list(reversed({var_name}))"
-        # sort/order
-        elif any(x in str(args[0]).lower() for x in ["sort", "order"]):
-            return f"sorted({var_name})"
-        return ""
-    
+        """Delegado para regras específicas de listas."""
+        return args[0] if args else ""
+
+    def list_length(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        return f"len({values[-1]})" if values else ""
+
+    def list_first(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        return f"{values[-1]}[0]" if values else ""
+
+    def list_last(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        return f"{values[-1]}[-1]" if values else ""
+
+    def list_reverse(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        return f"list(reversed({values[-1]}))" if values else ""
+
+    def list_sort(self, args: List[Any]) -> str:
+        values = self._collect_expr_values(args)
+        return f"sorted({values[-1]})" if values else ""
+
     def file_macro(self, args: List[Any]) -> str:
-        """exists file, delete file"""
+        """Delegado para macros de arquivos."""
+        return args[0] if args else ""
+
+    def file_exists_macro(self, args: List[Any]) -> str:
         self.needs_imports['os'] = True
-        if not args:
-            return ""
-        file_path = self._expr(args[-1])  # Último argumento é sempre o caminho
-        
-        # exists file
-        if any(x in str(args[0]).lower() for x in ["exists", "file exists"]):
-            return f"os.path.exists({file_path})"
-        # delete/remove file
-        elif any(x in str(args[0]).lower() for x in ["delete", "remove"]):
-            return f"os.remove({file_path})"
-        return ""
-    
+        values = self._collect_expr_values(args)
+        return f"os.path.exists({values[-1]})" if values else ""
+
+    def file_delete_macro(self, args: List[Any]) -> str:
+        self.needs_imports['os'] = True
+        values = self._collect_expr_values(args)
+        return f"os.remove({values[-1]})" if values else ""
+
     def date_macro(self, args: List[Any]) -> str:
         """current time/now/today"""
         self.needs_imports['datetime'] = True
         if not args:
             return ""
-        macro_type = str(args[0]).lower()
-        
-        if "today" in macro_type:
+        words = " ".join(
+            arg.value.lower() if isinstance(arg, Token) else str(arg).lower()
+            for arg in args
+        )
+        if "today" in words:
             return "datetime.date.today()"
-        else:  # current time/now/current date
-            return "datetime.datetime.now()"
-    
+        return "datetime.datetime.now()"
+
     def system_macro(self, args: List[Any]) -> str:
         """exit program/quit program"""
         self.needs_imports['sys'] = True
