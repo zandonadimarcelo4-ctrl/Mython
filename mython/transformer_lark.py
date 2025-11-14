@@ -32,7 +32,12 @@ class MythonTransformer(Transformer):
     # ============================================
     
     def start(self, statements: List[Any]) -> str:
-        """Início do programa."""
+        """
+        start: statement+
+        
+        CORRIGIDO: Apenas junta as strings já transformadas pelos métodos filhos.
+        NÃO chama self.transform() - o Lark já fez isso.
+        """
         lines = []
         
         # Adicionar imports necessários
@@ -54,101 +59,128 @@ class MythonTransformer(Transformer):
             lines.extend(imports)
             lines.append("")
         
-        # Processar cada statement e adicionar às linhas
+        # Cada statement já foi transformado em string pelos métodos filhos
+        # Apenas juntar as linhas
         for stmt in statements:
-            if stmt:
-                # Se é Tree, transformar recursivamente
-                if isinstance(stmt, Tree):
-                    transformed = self.transform(stmt)
-                    if transformed:
-                        stmt = transformed
-                # Se não é string, converter
-                if not isinstance(stmt, str):
-                    stmt = str(stmt)
-                # Adicionar as linhas do statement PRESERVANDO indentação
-                if stmt.strip():
-                    for line in stmt.split('\n'):
-                        # Não fazer strip - preservar indentação completamente
-                        if line.strip():  # Apenas verificar se não é linha vazia
+            if stmt and isinstance(stmt, str) and stmt.strip():
+                # Adicionar linhas preservando indentação
+                for line in stmt.split('\n'):
+                    if line.strip():
+                        lines.append(line)
+            elif stmt and not isinstance(stmt, str):
+                # Se não é string, converter (não deveria acontecer)
+                stmt_str = str(stmt)
+                if stmt_str.strip():
+                    for line in stmt_str.split('\n'):
+                        if line.strip():
                             lines.append(line)
         
         return "\n".join(lines) + "\n"
     
-    def statement(self, args: List[Any]) -> str:
-        """Um statement."""
-        if not args:
+    def simple_stmt(self, children: List[Any]) -> str:
+        """
+        simple_stmt: say_stmt | ask_stmt | assign_stmt | ...
+        
+        CORRIGIDO: Apenas retorna o resultado do filho.
+        NÃO chama self.transform() - o Lark já transformou o filho.
+        """
+        if not children:
             return ""
-        result = args[0]
         
-        # Se é Tree, transformar recursivamente
+        # Filtrar _NEWLINE se presente
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type == '_NEWLINE')]
+        
+        if not filtered:
+            return ""
+        
+        # O primeiro child já foi transformado pelo Lark em string
+        # Apenas retornar
+        result = filtered[0]
+        
+        # Se ainda é Tree (não deveria acontecer), converter para string
         if isinstance(result, Tree):
-            transformed = self.transform(result)
-            if transformed:
-                result = transformed
+            return str(result)
         
-        # Garantir que é string
-        if not isinstance(result, str):
-            result = str(result)
+        # Se é string, retornar diretamente
+        if isinstance(result, str):
+            return result
         
-        # Se parece ser uma string quebrada em caracteres (TODAS as linhas têm apenas 1 caractere), tentar corrigir
-        if '\n' in result:
-            lines = result.split('\n')
-            non_empty = [line.strip() for line in lines if line.strip()]
-            # Verificar se TODAS as linhas (sem strip) têm exatamente 1 caractere (sem espaços)
-            # Isso indica que é uma string realmente quebrada, não código com indentação
-            if non_empty and all(len(line) == 1 for line in non_empty):
-                # Pode ser uma string quebrada
-                joined = "".join(non_empty)
-                # Se parece ser código Python válido, usar
-                if any(keyword in joined for keyword in ['if', 'else', 'print', '=', '(', ')', ':', '"', "'"]):
-                    return joined
-        # Retornar resultado como está (preservar indentação e quebras de linha)
-        return result
+        # Fallback: converter para string
+        return str(result) if result else ""
     
-    def block_stmt(self, args: List[Any]) -> str:
-        """Um statement dentro de um bloco (if, while, for, etc.)."""
-        # block_stmt: simple_stmt _NEWLINE? | compound_stmt
-        # args[0] = simple_stmt ou compound_stmt
-        # args[1] = _NEWLINE? (opcional)
-        if not args:
+    def statement(self, children: List[Any]) -> str:
+        """
+        statement: simple_stmt _NEWLINE | compound_stmt
+        
+        CORRIGIDO: Apenas retorna o resultado do filho.
+        NÃO chama self.transform() - o Lark já transformou o filho.
+        """
+        if not children:
             return ""
         
-        # Processar o primeiro argumento (simple_stmt ou compound_stmt)
-        result = args[0]
+        # Filtrar _NEWLINE se presente
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type == '_NEWLINE')]
         
-        # Se é Tree, transformar recursivamente
+        if not filtered:
+            return ""
+        
+        # O primeiro child já foi transformado pelo Lark em string
+        result = filtered[0]
+        
+        # Se ainda é Tree (não deveria acontecer), converter para string
         if isinstance(result, Tree):
-            transformed = self.transform(result)
-            if transformed:
-                result = transformed
+            return str(result)
         
-        # Garantir que é string
-        if not isinstance(result, str):
-            result = str(result)
+        # Se é string, retornar diretamente
+        if isinstance(result, str):
+            return result
         
-        # Retornar resultado (preservar indentação)
-        return result
+        # Fallback: converter para string
+        return str(result) if result else ""
     
-    def simple_stmt(self, args: List[Any]) -> str:
-        """Statement simples - transforma recursivamente."""
-        if not args:
-            return ""
-        # args[0] é o statement (say_stmt, ask_stmt, etc.)
-        # args[1] pode ser _NEWLINE (opcional)
-        result = args[0]
+    def block_stmt(self, children: List[Any]) -> str:
+        """
+        block_stmt: simple_stmt _NEWLINE? | compound_stmt
         
-        # Se é Tree, transformar recursivamente
+        CORRIGIDO: Processa o filho já transformado e indenta o conteúdo.
+        NÃO chama self.transform() - o Lark já transformou o filho.
+        """
+        if not children:
+            return "    pass"
+        
+        # Filtrar _NEWLINE se presente
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type == '_NEWLINE')]
+        
+        if not filtered:
+            return "    pass"
+        
+        # O primeiro child já foi transformado pelo Lark em string
+        result = filtered[0]
+        
+        # Se ainda é Tree (não deveria acontecer), converter para string
         if isinstance(result, Tree):
-            transformed = self.transform(result)
-            if transformed:
-                result = transformed
+            result = str(result)
         
-        # Garantir que é string
+        # Se não é string, converter
         if not isinstance(result, str):
             result = str(result)
         
-        # Retornar resultado (NEWLINE já foi processado)
-        return result
+        # Se está vazio, retornar pass indentado
+        if not result.strip():
+            return "    pass"
+        
+        # Indentar SOMENTE o conteúdo interno (linha por linha)
+        # IMPORTANTE: Não indentar se já começa com "else:" (isso seria erro)
+        lines = result.split('\n')
+        indented_lines = []
+        for line in lines:
+            if line.strip():
+                # Adicionar indentação de 4 espaços
+                indented_lines.append("    " + line.strip())
+            else:
+                indented_lines.append("")
+        
+        return "\n".join(indented_lines)
     
     def compound_stmt(self, args: List[Any]) -> str:
         """Statement composto - transforma recursivamente."""
@@ -245,21 +277,31 @@ class MythonTransformer(Transformer):
     # Saída
     # ============================================
     
-    def say_stmt(self, args: List[Any]) -> str:
-        """say - ULTRA SIMPLES: apenas "say" """
-        # args[0] = expr
-        # args[-1] = _NEWLINE (ignorar)
-        expr = self._expr(args[0])
-        # Se expr parece ser uma string quebrada (múltiplas linhas de um caractere), tentar corrigir
-        if isinstance(expr, str):
-            # Verificar se é uma string quebrada em caracteres (sem indentação)
-            if '\n' in expr:
-                lines = expr.split('\n')
-                non_empty = [line.strip() for line in lines if line.strip()]
-                # Se TODAS as linhas (sem strip) têm exatamente 1 caractere, é uma string quebrada
-                if non_empty and all(len(line) == 1 for line in non_empty):
-                    # Juntar todas as linhas
-                    expr = "".join(non_empty)
+    def say_stmt(self, children: List[Any]) -> str:
+        """
+        say_stmt: SAY expr
+        
+        CORRIGIDO: Processa expr já transformado.
+        """
+        if not children:
+            return self.indent() + 'print("")'
+        
+        # Filtrar tokens SAY, _NEWLINE
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type in ['SAY', '_NEWLINE'])]
+        
+        if not filtered:
+            return self.indent() + 'print("")'
+        
+        # Primeiro arg é expr (já transformado ou Token)
+        expr_arg = filtered[0]
+        
+        # Se é Token, processar
+        if isinstance(expr_arg, Token):
+            expr = expr_arg.value if expr_arg.type == 'STRING' else self._expr(expr_arg)
+        else:
+            # Se já é string, usar diretamente
+            expr = str(expr_arg)
+        
         # Retornar com indentação atual
         return self.indent() + f"print({expr})"
     
@@ -267,207 +309,435 @@ class MythonTransformer(Transformer):
     # Entrada
     # ============================================
     
-    def ask_stmt(self, args: List[Any]) -> str:
+    def ask_stmt(self, children: List[Any]) -> str:
         """
-        ask - ULTRA SIMPLES: apenas "ask" + opcional "number"
-        ask name = input() ou ask name number = int(input())
-        Também suporta: ask number name = int(input())
-        """
-        # Detectar padrão: pode ser "ask NAME number STRING?" ou "ask number NAME STRING?"
-        # args pode ser:
-        # - [NAME, "number", STRING?] - "ask name number ..."
-        # - [NAME, "number"] - "ask name number"
-        # - ["number", NAME, STRING?] - "ask number name ..."
-        # - ["number", NAME] - "ask number name"
-        # - [NAME, STRING?] - "ask name ..."
-        # - [NAME] - "ask name"
+        ask_stmt: ASK ask_type NAME STRING?
+                | ASK ask_type NAME
+                | ASK NAME STRING?
+                | ASK NAME
         
+        CORRIGIDO: Processa diretamente os tokens sem chamar self.transform().
+        """
+        if not children:
+            return self.indent() + 'input()'
+        
+        # Filtrar tokens ASK, _NEWLINE - manter apenas argumentos importantes
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type in ['ASK', '_NEWLINE'])]
+        
+        if not filtered:
+            return self.indent() + 'input()'
+        
+        ask_type_val = "text"  # Padrão
         var_name = None
-        is_number = False
         prompt = '""'
         
-        # Verificar se primeiro argumento é "number" (padrão "ask number NAME")
-        if args and isinstance(args[0], Token) and args[0].value == "number":
-            is_number = True
-            # args[1] deve ser o NAME
-            if len(args) > 1:
-                var_name = args[1].value if isinstance(args[1], Token) else self._expr(args[1])
-            # args[2] pode ser STRING (prompt)
-            if len(args) > 2 and hasattr(args[2], 'type') and args[2].type == 'STRING':
-                prompt = args[2].value if isinstance(args[2], Token) else self._expr(args[2])
-        else:
-            # Padrão normal: "ask NAME ..."
-            var_name = args[0].value if isinstance(args[0], Token) else self._expr(args[0])
-            
-            # Verificar se tem "number" ou STRING (prompt)
-            for arg in args[1:]:
-                # Ignorar _NEWLINE
-                if hasattr(arg, 'type') and arg.type == '_NEWLINE':
-                    continue
-                
-                # Verificar se é "number"
-                if isinstance(arg, Token) and arg.value == "number":
-                    is_number = True
-                # Se é STRING, é o prompt
-                elif hasattr(arg, 'type') and arg.type == 'STRING':
-                    prompt = self._expr(arg)
+        # Padrão 1: ASK ask_type NAME STRING?
+        # filtered[0] = resultado de ask_type (já transformado: "number" ou "text")
+        # filtered[1] = Token(NAME) ou já transformado
+        # filtered[2] = Token(STRING)? (opcional) ou já transformado
         
-        # Gerar código
-        if is_number:
+        first_arg = filtered[0] if filtered else None
+        
+        # Se primeiro arg é string "number" ou "text" (já transformado pelo método number/text)
+        if isinstance(first_arg, str) and first_arg in ['number', 'text']:
+            ask_type_val = first_arg
+            
+            # Segundo arg é NAME (variável)
+            if len(filtered) > 1:
+                name_arg = filtered[1]
+                if isinstance(name_arg, Token) and name_arg.type == 'NAME':
+                    var_name = name_arg.value
+                elif isinstance(name_arg, str):
+                    var_name = name_arg
+                else:
+                    var_name = str(name_arg)
+            
+            # Terceiro arg é STRING (prompt) - opcional
+            if len(filtered) > 2:
+                str_arg = filtered[2]
+                if isinstance(str_arg, Token) and str_arg.type == 'STRING':
+                    prompt = str_arg.value
+                elif isinstance(str_arg, str):
+                    prompt = str_arg
+                else:
+                    prompt = str(str_arg)
+        # Padrão 2: ASK NAME STRING? (sem ask_type)
+        elif isinstance(first_arg, Token) and first_arg.type == 'NAME':
+            ask_type_val = "text"
+            var_name = first_arg.value
+            # Segundo arg é STRING (prompt) - opcional
+            if len(filtered) > 1:
+                str_arg = filtered[1]
+                if isinstance(str_arg, Token) and str_arg.type == 'STRING':
+                    prompt = str_arg.value
+                elif isinstance(str_arg, str):
+                    prompt = str_arg
+                else:
+                    prompt = str(str_arg)
+        elif isinstance(first_arg, str):
+            # Se é string mas não é "number" ou "text", pode ser NAME já transformado
+            ask_type_val = "text"
+            var_name = first_arg
+            if len(filtered) > 1:
+                str_arg = filtered[1]
+                if isinstance(str_arg, Token) and str_arg.type == 'STRING':
+                    prompt = str_arg.value
+                elif isinstance(str_arg, str):
+                    prompt = str_arg
+                else:
+                    prompt = str(str_arg)
+        
+        # Valores padrão
+        if not var_name:
+            var_name = "value"
+        if not prompt or prompt == '""':
+            prompt = '""'
+        
+        # Gerar código Python
+        if ask_type_val == "number":
             return self.indent() + f'{var_name} = int(input({prompt}))'
         else:
             return self.indent() + f'{var_name} = input({prompt})'
+    
+    def number(self, children: List[Any]) -> str:
+        """
+        number: NUMBER_TYPE -> number
+        
+        CORRIGIDO: Retorna "number" como string.
+        Com aliases (->), o Lark chama este método diretamente.
+        """
+        return "number"
+    
+    def text(self, children: List[Any]) -> str:
+        """
+        text: TEXT_TYPE -> text
+        
+        CORRIGIDO: Retorna "text" como string.
+        Com aliases (->), o Lark chama este método diretamente.
+        """
+        return "text"
     
     # ============================================
     # Condições
     # ============================================
     
-    def if_stmt(self, args: List[Any]) -> str:
+    def if_stmt(self, children: List[Any]) -> str:
         """
-        if_stmt: "if" condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
+        if_stmt: IF condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
         
-        IMPORTANTE: O Lark injeta INDENT/DEDENT como tokens nos args.
-        Estrutura esperada dos args:
-        - args[0] = condition (Tree(comparison, ...) ou Tree(atom, ...))
-        - args[1] = Token(INDENT, ...) (ignorar - apenas ajustar indent_level)
-        - args[2:-2] = block_stmt+ (Tree(simple_stmt, ...) ou Tree(compound_stmt, ...))
-        - args[-2] = Token(DEDENT, ...) (ignorar - apenas ajustar indent_level)
-        - args[-1] = Tree(else_block, ...) (opcional)
+        CORRIGIDO: Processa condition, block_stmt+ e else_block? já transformados.
+        NÃO chama self.transform() - o Lark já transformou os filhos.
         """
-        if not args:
+        if not children:
             return ""
         
-        # Processar condição
-        condition = self._expr(args[0])
+        # Filtrar tokens IF, _NEWLINE, ":", INDENT, DEDENT
+        # Manter apenas: condition (string), block_stmt+ (strings), else_block? (string)
+        filtered = []
+        condition = ""
+        blocks = []
+        else_part = ""
         
-        # Separar block_stmt+ e else_block?
-        block_stmts = []
-        else_block_str = None
-        
-        # Processar args[1:] (pular condition)
-        i = 1
-        while i < len(args):
-            arg = args[i]
+        i = 0
+        while i < len(children):
+            arg = children[i]
             
-            # Processar INDENT (ajustar indent_level)
-            if isinstance(arg, Token) and arg.type == 'INDENT':
-                self.indent_level += 1
+            # Ignorar tokens de controle
+            if isinstance(arg, Token):
+                if arg.type in ['IF', '_NEWLINE', 'INDENT', 'DEDENT']:
+                    i += 1
+                    continue
+                if arg.value == ':':
+                    i += 1
+                    continue
+            
+            # Primeiro não-token é a condition
+            if not condition:
+                condition = self._expr(arg) if hasattr(arg, 'children') else str(arg)
                 i += 1
                 continue
             
-            # Processar DEDENT (ajustar indent_level)
-            if isinstance(arg, Token) and arg.type == 'DEDENT':
-                self.indent_level -= 1
-                # Tudo depois do DEDENT é else_block (se existir)
-                if i + 1 < len(args):
-                    else_block_tree = args[i + 1]
-                    if isinstance(else_block_tree, Tree) and else_block_tree.data == 'else_block':
-                        # Transformar else_block
-                        else_block_str = self.transform(else_block_tree)
-                break
-            
-            # Se é Tree com data 'else_block', é o else_block
+            # Depois vem block_stmt+ (strings já transformadas)
+            # Até encontrar else_block
             if isinstance(arg, Tree) and arg.data == 'else_block':
-                # Transformar else_block
-                else_block_str = self.transform(arg)
-                break
+                # else_block já foi transformado pelo Lark
+                else_part = str(arg)  # Não deveria ser Tree, mas se for, converter
+                i += 1
+                continue
             
-            # Se é Tree com data 'block_stmt' ou 'simple_stmt', transformar recursivamente
-            if isinstance(arg, Tree):
-                transformed = self.transform(arg)
-                if transformed and isinstance(transformed, str) and transformed.strip():
-                    block_stmts.append(transformed)
-            
-            # Se já é string, adicionar diretamente
-            elif isinstance(arg, str) and arg.strip() and arg not in ['INDENT', 'DEDENT', '_NEWLINE']:
-                block_stmts.append(arg)
+            # Se é string, é um block_stmt já transformado
+            if isinstance(arg, str) and arg.strip():
+                blocks.append(arg)
+            # Se é Tree, pode ser block_stmt não transformado (não deveria acontecer)
+            elif isinstance(arg, Tree):
+                blocks.append(str(arg))
             
             i += 1
         
         # Construir bloco if
-        if block_stmts:
-            # Juntar block_stmts com quebras de linha
-            # Cada block_stmt já deve estar indentado corretamente
-            block_lines = []
-            for stmt in block_stmts:
-                for line in stmt.split('\n'):
-                    if line.strip():
-                        # Adicionar indentação do bloco if (4 espaços)
-                        block_lines.append("    " + line.strip())
-            block = "\n".join(block_lines)
+        if blocks:
+            block_code = "\n".join(blocks)
         else:
-            block = "    pass"
+            block_code = "    pass"
         
         # Construir resultado
-        result = f"if {condition}:"
-        if block:
-            result += "\n" + block
+        code = f"if {condition}:"
+        if block_code:
+            code += "\n" + block_code
         
         # Adicionar else_block se existir
-        if else_block_str and isinstance(else_block_str, str):
-            # O else_block já retorna "else:" sem indentação extra
-            result += "\n" + else_block_str
+        if else_part:
+            code += "\n" + else_part
         
-        return result
+        return code
     
-    def else_block(self, args: List[Any]) -> str:
+    def else_block(self, children: List[Any]) -> str:
         """
-        else_block: _NEWLINE* "else" ":" _NEWLINE INDENT block_stmt+ DEDENT
+        else_block: _NEWLINE* ELSE ":" _NEWLINE INDENT block_stmt+ DEDENT
         
-        Estrutura esperada dos args (após o parser processar):
-        - args[0] = Token(INDENT, ...) (ignorar - apenas ajustar indent_level)
-        - args[1:-1] = block_stmt+ (Tree(simple_stmt, ...) ou Tree(compound_stmt, ...))
-        - args[-1] = Token(DEDENT, ...) (ignorar - apenas ajustar indent_level)
-        
-        NOTA: "else" e ":" já foram consumidos pela gramática e não aparecem nos args.
+        CORRIGIDO: Processa block_stmt+ já transformados.
+        NÃO chama self.transform() - o Lark já transformou os filhos.
+        Retorna "else:" sem indentação extra (mesmo nível do if).
         """
-        if not args:
+        if not children:
             return "else:\n    pass"
         
-        # Processar block_stmt+
-        block_stmts = []
+        # Filtrar tokens INDENT, DEDENT, _NEWLINE, ELSE, ":"
+        # Manter apenas block_stmt+ (strings já transformadas)
+        blocks = []
         
-        # Processar args (pular INDENT/DEDENT)
-        for arg in args:
-            # Processar INDENT (ajustar indent_level)
-            if isinstance(arg, Token) and arg.type == 'INDENT':
-                self.indent_level += 1
-                continue
+        for arg in children:
+            # Ignorar tokens de controle
+            if isinstance(arg, Token):
+                if arg.type in ['INDENT', 'DEDENT', '_NEWLINE', 'ELSE']:
+                    continue
+                if arg.value == ':':
+                    continue
             
-            # Processar DEDENT (ajustar indent_level)
-            if isinstance(arg, Token) and arg.type == 'DEDENT':
-                self.indent_level -= 1
-                continue
-            
-            # Se é Tree, transformar recursivamente
-            if isinstance(arg, Tree):
-                transformed = self.transform(arg)
-                if transformed and isinstance(transformed, str) and transformed.strip():
-                    block_stmts.append(transformed)
-            
-            # Se já é string, adicionar diretamente
-            elif isinstance(arg, str) and arg.strip() and arg not in ['INDENT', 'DEDENT', '_NEWLINE', 'else', ':']:
-                block_stmts.append(arg)
+            # Se é string, é um block_stmt já transformado
+            if isinstance(arg, str) and arg.strip():
+                blocks.append(arg)
+            # Se é Tree, pode ser block_stmt não transformado (não deveria acontecer)
+            elif isinstance(arg, Tree):
+                blocks.append(str(arg))
         
         # Construir bloco else
-        if block_stmts:
-            # Juntar block_stmts com quebras de linha
-            block_lines = []
-            for stmt in block_stmts:
-                for line in stmt.split('\n'):
-                    if line.strip():
-                        # Adicionar indentação do bloco else (4 espaços)
-                        block_lines.append("    " + line.strip())
-            block = "\n".join(block_lines)
+        if blocks:
+            block = "\n".join(stmt for stmt in blocks if stmt.strip())
         else:
             block = "    pass"
         
-        # Construir resultado (else: sem indentação extra - mesmo nível do if)
+        # Construir resultado: else: SEM indentação extra (mesmo nível do if)
         result = "else:"
         if block:
             result += "\n" + block
         
         return result
+    
+    # ============================================
+    # Loops
+    # ============================================
+    
+    def while_stmt(self, children: List[Any]) -> str:
+        """
+        while_stmt: WHILE condition ":" _NEWLINE INDENT block_stmt+ DEDENT
+        
+        CORRIGIDO: Processa condition e block_stmt+ já transformados.
+        NÃO chama self.transform() - o Lark já transformou os filhos.
+        """
+        if not children:
+            return ""
+        
+        # Filtrar tokens WHILE, _NEWLINE, ":", INDENT, DEDENT
+        # Manter apenas: condition (string), block_stmt+ (strings)
+        filtered = []
+        condition = ""
+        blocks = []
+        
+        i = 0
+        while i < len(children):
+            arg = children[i]
+            
+            # Ignorar tokens de controle
+            if isinstance(arg, Token):
+                if arg.type in ['WHILE', '_NEWLINE', 'INDENT', 'DEDENT']:
+                    i += 1
+                    continue
+                if arg.value == ':':
+                    i += 1
+                    continue
+            
+            # Primeiro não-token é a condition
+            if not condition:
+                condition = self._expr(arg) if hasattr(arg, 'children') else str(arg)
+                i += 1
+                continue
+            
+            # Depois vem block_stmt+ (strings já transformadas)
+            if isinstance(arg, str) and arg.strip():
+                blocks.append(arg)
+            # Se é Tree, pode ser block_stmt não transformado (não deveria acontecer)
+            elif isinstance(arg, Tree):
+                blocks.append(str(arg))
+            
+            i += 1
+        
+        # Construir bloco while
+        if blocks:
+            block_code = "\n".join(blocks)
+        else:
+            block_code = "    pass"
+        
+        # Construir resultado
+        code = f"while {condition}:"
+        if block_code:
+            code += "\n" + block_code
+        
+        return code
+    
+    def for_each_stmt(self, children: List[Any]) -> str:
+        """
+        for_each_stmt: FOR NAME IN expr ":" _NEWLINE INDENT block_stmt+ DEDENT
+        
+        CORRIGIDO: Processa NAME, expr e block_stmt+ já transformados.
+        """
+        if not children:
+            return ""
+        
+        # Filtrar tokens FOR, IN, _NEWLINE, ":", INDENT, DEDENT
+        # Manter apenas: NAME (string), expr (string), block_stmt+ (strings)
+        filtered = []
+        var_name = None
+        expr_value = None
+        blocks = []
+        
+        i = 0
+        while i < len(children):
+            arg = children[i]
+            
+            # Ignorar tokens de controle
+            if isinstance(arg, Token):
+                if arg.type in ['FOR', 'IN', '_NEWLINE', 'INDENT', 'DEDENT']:
+                    i += 1
+                    continue
+                if arg.value == ':':
+                    i += 1
+                    continue
+                # Se é NAME, é a variável do loop
+                if arg.type == 'NAME':
+                    var_name = arg.value
+                    i += 1
+                    continue
+            
+            # Se não é Token, pode ser expr ou block_stmt
+            if not var_name:
+                # Ainda não pegamos o var_name, então este é expr
+                expr_value = self._expr(arg) if hasattr(arg, 'children') else str(arg)
+                i += 1
+                continue
+            
+            # Depois vem block_stmt+ (strings já transformadas)
+            if isinstance(arg, str) and arg.strip():
+                blocks.append(arg)
+            # Se é Tree, pode ser block_stmt não transformado
+            elif isinstance(arg, Tree):
+                blocks.append(str(arg))
+            
+            i += 1
+        
+        # Valores padrão
+        if not var_name:
+            var_name = "item"
+        if not expr_value:
+            expr_value = "[]"
+        
+        # Construir bloco for
+        if blocks:
+            block_code = "\n".join(blocks)
+        else:
+            block_code = "    pass"
+        
+        # Construir resultado
+        code = f"for {var_name} in {expr_value}:"
+        if block_code:
+            code += "\n" + block_code
+        
+        return code
+    
+    def repeat_stmt(self, children: List[Any]) -> str:
+        """
+        repeat_stmt: REPEAT NUMBER ":" _NEWLINE INDENT block_stmt+ DEDENT
+        
+        CORRIGIDO: Processa NUMBER e block_stmt+ já transformados.
+        """
+        if not children:
+            return ""
+        
+        # Filtrar tokens REPEAT, _NEWLINE, ":", INDENT, DEDENT
+        # Manter apenas: NUMBER (string), block_stmt+ (strings)
+        filtered = []
+        number_value = None
+        blocks = []
+        
+        i = 0
+        while i < len(children):
+            arg = children[i]
+            
+            # Ignorar tokens de controle
+            if isinstance(arg, Token):
+                if arg.type in ['REPEAT', '_NEWLINE', 'INDENT', 'DEDENT']:
+                    i += 1
+                    continue
+                if arg.value == ':':
+                    i += 1
+                    continue
+                # Se é NUMBER, é o número de repetições
+                if arg.type == 'NUMBER':
+                    number_value = arg.value
+                    i += 1
+                    continue
+            
+            # Depois vem block_stmt+ (strings já transformadas)
+            if isinstance(arg, str) and arg.strip():
+                blocks.append(arg)
+            # Se é Tree, pode ser block_stmt não transformado
+            elif isinstance(arg, Tree):
+                blocks.append(str(arg))
+            
+            i += 1
+        
+        # Valor padrão
+        if not number_value:
+            number_value = "1"
+        
+        # Construir bloco repeat
+        if blocks:
+            block_code = "\n".join(blocks)
+        else:
+            block_code = "    pass"
+        
+        # Construir resultado
+        code = f"for _ in range({number_value}):"
+        if block_code:
+            code += "\n" + block_code
+        
+        return code
+    
+    def break_stmt(self, children: List[Any]) -> str:
+        """
+        break_stmt: BREAK
+        
+        CORRIGIDO: Retorna "break" sem processamento extra.
+        """
+        return self.indent() + "break"
+    
+    def continue_stmt(self, children: List[Any]) -> str:
+        """
+        continue_stmt: CONTINUE
+        
+        CORRIGIDO: Retorna "continue" sem processamento extra.
+        """
+        return self.indent() + "continue"
     
     def elif_stmt(self, args: List[Any]) -> str:
         """elif/else if/or if - Com INDENT/DEDENT, os blocos já vêm estruturados corretamente."""
@@ -644,39 +914,75 @@ class MythonTransformer(Transformer):
         return self._expr(args[0])
     
     # ============================================
-    # Loops
+    # Operadores aritméticos
     # ============================================
     
-    def repeat_stmt(self, args: List[Any]) -> str:
-        """repeat/do/loop N times"""
-        number = args[0].value if isinstance(args[0], Token) else str(args[0])
-        block = args[1] if len(args) > 1 else ""
-        return self.indent() + f"for _ in range({number}):\n{block}"
+    def add(self, children: List[Any]) -> str:
+        """Soma: a + b"""
+        if len(children) < 2:
+            return str(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"{left} + {right}"
     
-    def for_each_stmt(self, args: List[Any]) -> str:
-        """for each/for every/loop through/iterate over"""
-        var_name = args[0].value if isinstance(args[0], Token) else str(args[0])
-        expr = self._expr(args[1])
-        block = args[2] if len(args) > 2 else ""
-        return self.indent() + f"for {var_name} in {expr}:\n{block}"
+    def sub(self, children: List[Any]) -> str:
+        """Subtração: a - b"""
+        if len(children) < 2:
+            return str(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"{left} - {right}"
     
-    def while_stmt(self, args: List[Any]) -> str:
-        """while/as long as"""
-        condition = self._condition(args[0])
-        block = args[1] if len(args) > 1 else ""
-        return self.indent() + f"while {condition}:\n{block}"
+    def mul(self, children: List[Any]) -> str:
+        """Multiplicação: a * b"""
+        if len(children) < 2:
+            return str(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"{left} * {right}"
     
-    def break_stmt(self, args: List[Any]) -> str:
-        """break/stop/exit loop"""
-        return self.indent() + "break"
+    def div(self, children: List[Any]) -> str:
+        """Divisão: a / b"""
+        if len(children) < 2:
+            return str(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"{left} / {right}"
     
-    def continue_stmt(self, args: List[Any]) -> str:
-        """continue/skip/next"""
-        return self.indent() + "continue"
+    def floordiv(self, children: List[Any]) -> str:
+        """Divisão inteira: a // b"""
+        if len(children) < 2:
+            return str(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"{left} // {right}"
     
-    def pass_stmt(self, args: List[Any]) -> str:
-        """pass/do nothing"""
-        return self.indent() + "pass"
+    def mod(self, children: List[Any]) -> str:
+        """Módulo: a % b"""
+        if len(children) < 2:
+            return str(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"{left} % {right}"
+    
+    def pow(self, children: List[Any]) -> str:
+        """Potência: a ** b"""
+        if len(children) < 2:
+            return str(children[0]) if children else ""
+        left = self._expr(children[0])
+        right = self._expr(children[1])
+        return f"{left} ** {right}"
+    
+    def paren_expr(self, children: List[Any]) -> str:
+        """Parênteses: (expr)"""
+        if not children:
+            return ""
+        expr = self._expr(children[0])
+        return f"({expr})"
+    
+    # ============================================
+    # Loops (métodos já foram adicionados acima após else_block)
+    # ============================================
     
     # ============================================
     # Estruturas de dados
@@ -722,16 +1028,133 @@ class MythonTransformer(Transformer):
     # Funções
     # ============================================
     
-    def function_def(self, args: List[Any]) -> str:
-        """define/function/to/create function"""
-        func_name = args[0].value if isinstance(args[0], Token) else str(args[0])
-        params = self._params(args[1]) if len(args) > 1 and args[1] else ""
-        return self.indent() + f"def {func_name}({params}):"
+    # ============================================
+    # Funções
+    # ============================================
     
-    def return_stmt(self, args: List[Any]) -> str:
-        """return/give back/send back"""
-        value = self._expr(args[0]) if args else ""
-        return self.indent() + f"return {value}" if value else self.indent() + "return"
+    def function_def(self, children: List[Any]) -> str:
+        """
+        function_def: (DEF | FUNC) NAME "(" params? ")" ":" _NEWLINE INDENT block_stmt+ DEDENT
+        
+        CORRIGIDO: Processa NAME, params e block_stmt+ já transformados.
+        NÃO chama self.transform() - o Lark já transformou os filhos.
+        """
+        if not children:
+            return ""
+        
+        # Filtrar tokens DEF, FUNC, _NEWLINE, ":", INDENT, DEDENT
+        # Manter apenas: NAME (string), params (string ou lista), block_stmt+ (strings)
+        func_name = None
+        params_str = ""
+        blocks = []
+        
+        i = 0
+        while i < len(children):
+            arg = children[i]
+            
+            # Ignorar tokens de controle
+            if isinstance(arg, Token):
+                if arg.type in ['DEF', 'FUNC', '_NEWLINE', 'INDENT', 'DEDENT']:
+                    i += 1
+                    continue
+                if arg.value in [':', '(']:
+                    i += 1
+                    continue
+                if arg.value == ')':
+                    i += 1
+                    continue
+                # Se é NAME, é o nome da função
+                if arg.type == 'NAME':
+                    func_name = arg.value
+                    i += 1
+                    continue
+            
+            # Se não é Token e ainda não temos func_name, processar params
+            if func_name and not params_str:
+                # Params pode ser Tree ou lista de Tokens
+                if hasattr(arg, 'children'):
+                    # É Tree (params), processar
+                    params_list = []
+                    for child in arg.children:
+                        if isinstance(child, Token) and child.type == 'NAME':
+                            params_list.append(child.value)
+                        elif isinstance(child, str):
+                            params_list.append(child)
+                    params_str = ", ".join(params_list)
+                elif isinstance(arg, list):
+                    # É lista de params
+                    params_list = []
+                    for p in arg:
+                        if isinstance(p, Token) and p.type == 'NAME':
+                            params_list.append(p.value)
+                        elif isinstance(p, str):
+                            params_list.append(p)
+                    params_str = ", ".join(params_list)
+                elif isinstance(arg, Tree) and arg.data == 'params':
+                    # É Tree de params, processar children
+                    params_list = []
+                    for child in arg.children:
+                        if isinstance(child, Token) and child.type == 'NAME':
+                            params_list.append(child.value)
+                        elif isinstance(child, str):
+                            params_list.append(child)
+                    params_str = ", ".join(params_list)
+                i += 1
+                continue
+            
+            # Depois vem block_stmt+ (strings já transformadas)
+            if isinstance(arg, str) and arg.strip():
+                blocks.append(arg)
+            # Se é Tree, pode ser block_stmt não transformado
+            elif isinstance(arg, Tree):
+                blocks.append(str(arg))
+            
+            i += 1
+        
+        # Valor padrão
+        if not func_name:
+            func_name = "func"
+        
+        # Construir bloco da função
+        if blocks:
+            block_code = "\n".join(blocks)
+        else:
+            block_code = "    pass"
+        
+        # Construir resultado
+        code = f"def {func_name}({params_str}):"
+        if block_code:
+            code += "\n" + block_code
+        
+        return code
+    
+    def return_stmt(self, children: List[Any]) -> str:
+        """
+        return_stmt: RETURN expr?
+        
+        CORRIGIDO: Processa expr já transformado.
+        """
+        if not children:
+            return self.indent() + "return"
+        
+        # Filtrar tokens RETURN, _NEWLINE
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type in ['RETURN', '_NEWLINE'])]
+        
+        if not filtered:
+            return self.indent() + "return"
+        
+        # Primeiro arg é expr (já transformado ou Token)
+        expr_arg = filtered[0]
+        
+        # Se é Token, processar
+        if isinstance(expr_arg, Token):
+            expr = self._expr(expr_arg)
+        else:
+            # Se já é string, usar diretamente
+            expr = str(expr_arg)
+        
+        # Retornar com indentação atual
+        return self.indent() + f"return {expr}"
     
     # ============================================
     # Classes

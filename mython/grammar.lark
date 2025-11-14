@@ -72,39 +72,45 @@ compound_stmt: async_function_def
              | open_file_stmt
 
 // Saída (ULTRA SIMPLES: apenas "say")
-say_stmt: "say" expr
+say_stmt: SAY expr
 
 // Entrada (ULTRA SIMPLES: apenas "ask" + opcional "number")
 // ask name = input() ou ask number name = int(input())
-// IMPORTANTE: Ordem importa - mais específicos primeiro (ask number NAME antes de ask NAME)
-// IMPORTANTE: "number" deve ser um literal "number" para ser reconhecido pelo parser
-ask_stmt: "ask" "number" NAME STRING?
-        | "ask" "number" NAME
-        | "ask" NAME "number" STRING?
-        | "ask" NAME "number"
-        | "ask" NAME STRING?
-        | "ask" NAME
+// SOLUÇÃO: Usar ask_type como regra separada para garantir parsing correto
+// CORRIGIDO: Usar ASK terminal em vez de "ask" literal
+ask_stmt: ASK ask_type NAME STRING?
+        | ASK ask_type NAME
+        | ASK NAME STRING?
+        | ASK NAME
+
+// Tipo de entrada (number ou text)
+// IMPORTANTE: Usar NUMBER_TYPE e TEXT_TYPE em vez de literais para garantir precedência
+ask_type: NUMBER_TYPE -> number
+        | TEXT_TYPE -> text
 
 // Condições (ULTRA SIMPLES: apenas "if" e "else")
 // IMPORTANTE: else_block NÃO é um statement separado - é parte do if_stmt
 // O else vem DEPOIS do DEDENT do bloco if, mas ainda dentro da regra if_stmt
 // O indenter SEMPRE injeta _NEWLINE após DEDENT, então o else_block precisa aceitar _NEWLINE* antes do "else"
 // IMPORTANTE: Dentro de blocos INDENT/DEDENT, usar block_stmt em vez de statement
-if_stmt: "if" condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
-elif_stmt: "else" "if" condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
-else_block: _NEWLINE* "else" ":" _NEWLINE INDENT block_stmt+ DEDENT
+// CORRIGIDO: Usar IF e ELSE terminais em vez de literais
+if_stmt: IF condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
+elif_stmt: ELSE IF condition ":" _NEWLINE INDENT block_stmt+ DEDENT else_block?
+else_block: _NEWLINE* ELSE ":" _NEWLINE INDENT block_stmt+ DEDENT
 
 // Loops (ULTRA SIMPLES: apenas "for", "while", "repeat")
 // IMPORTANTE: Dentro de blocos INDENT/DEDENT, usar block_stmt em vez de statement
-while_stmt: "while" condition ":" _NEWLINE INDENT block_stmt+ DEDENT
-for_each_stmt: "for" NAME "in" expr ":" _NEWLINE INDENT block_stmt+ DEDENT
-repeat_stmt: "repeat" NUMBER ":" _NEWLINE INDENT block_stmt+ DEDENT
+// CORRIGIDO: Usar WHILE terminal em vez de "while" literal
+while_stmt: WHILE condition ":" _NEWLINE INDENT block_stmt+ DEDENT
+for_each_stmt: FOR NAME IN expr ":" _NEWLINE INDENT block_stmt+ DEDENT
+repeat_stmt: REPEAT NUMBER ":" _NEWLINE INDENT block_stmt+ DEDENT
 
-// Funções (ULTRA SIMPLES: apenas "def")
+// Funções (ULTRA SIMPLES: "def" ou "func")
 // IMPORTANTE: Dentro de blocos INDENT/DEDENT, usar block_stmt em vez de statement
-async_function_def: "async" "def" NAME "(" params? ")" ":" _NEWLINE INDENT block_stmt+ DEDENT
-function_def: "def" NAME "(" params? ")" ":" _NEWLINE INDENT block_stmt+ DEDENT
-return_stmt: "return" expr?
+// CORRIGIDO: Usar DEF/FUNC terminais em vez de literais
+async_function_def: "async" DEF NAME "(" params? ")" ":" _NEWLINE INDENT block_stmt+ DEDENT
+function_def: (DEF | FUNC) NAME "(" params? ")" ":" _NEWLINE INDENT block_stmt+ DEDENT
+return_stmt: RETURN expr?
 
 // Classes - Usando INDENT/DEDENT para blocos
 // init_stmt e task_stmt são statements válidos APENAS dentro de class_def
@@ -188,6 +194,10 @@ comparison: atom comparison_op atom
 
 // Átomo (valor simples)
 ?atom: NAME | NUMBER | STRING
+     | "(" expr ")"  -> paren_expr
+     | function_call
+     | attribute_access
+     | subscription
 
 // Operadores de comparação Python (suportados após normalize_operators)
 // IMPORTANTE: Definir como terminais para evitar conflitos
@@ -201,18 +211,25 @@ NOT_EQUAL: "!="
 // Operador de comparação
 comparison_op: GREATER | LESS | GREATER_EQUAL | LESS_EQUAL | EQUALS | NOT_EQUAL
 
-// Expressões - ULTRA SIMPLIFICADAS (temporariamente)
-// IMPORTANTE: Restringir ao mínimo para garantir que o parser saiba quando a expressão termina
-// TODO: Expandir gradualmente após confirmar que funciona
-?expr: atom
-     | function_call
-     | attribute_access
-     | subscription
+// Expressões - Expandidas com operadores aritméticos
+// Prioridade: adição/subtração mais baixa, depois multiplicação/divisão, depois átomos
+?expr: sum
+?sum: product
+    | sum "+" product  -> add
+    | sum "-" product  -> sub
+?product: atom
+        | product "*" atom  -> mul
+        | product "/" atom  -> div
+        | product "//" atom -> floordiv
+        | product "%" atom  -> mod
+        | product "**" atom -> pow
 
 // Átomo (valor simples) - já definido acima em condition
 // ?atom: NAME | NUMBER | STRING  // Removido - já definido acima
 
 function_call: NAME "(" args? ")"
+
+// Argumentos de função
 args: expr ("," expr)*
      | args_varargs ("," expr)*
      | expr ("," args_varargs)?
@@ -246,11 +263,36 @@ list_pattern: "[" pattern ("," pattern)* "]"
 // python_escape: /(?!\s*(if|elif|else|when|whenever|say|print|show|display|tell|ask|get|read|prompt|for|while|def|class|try|except|finally|with|repeat|do|loop|break|stop|continue|skip|pass|set|assign|let|make|put|store|save|create|initialize|define|function|return|give|back|send|add|append|remove|delete|wait|random|use|from|import|attempt|catch|raise|assert|lambda|yield|await|match|case|list|dict|tuple|set)\b)(?!["']).+/
 
 // Terminais
-// IMPORTANTE: Ordem importa - STRING deve estar antes de python_escape para ser capturado corretamente
+// IMPORTANTE: Ordem importa MUITO no Lark - palavras-chave específicas PRIMEIRO, NAME por último
+// STRING deve estar antes de python_escape para ser capturado corretamente
 STRING: /"[^"]*"|'[^']*'/
 FSTRING: /f"[^"]*"|f'[^']*'/
 RSTRING: /r"[^"]*"|r'[^']*'/
 BSTRING: /b"[^"]*"|b'[^']*'/
+
+// IMPORTANTE: Tipos e palavras-chave PRIMEIRO (antes de NAME)
+// Isso garante que "number", "text", "ask", "say", "if", "else" sejam tokenizados corretamente
+// e não virem NAME genérico
+NUMBER_TYPE: "number"
+TEXT_TYPE: "text"
+ASK: "ask"
+SAY: "say"
+IF: "if"
+ELSE: "else"
+WHILE: "while"
+FOR: "for"
+IN: "in"
+DEF: "def"
+FUNC: "func"
+CLASS: "class"
+RETURN: "return"
+BREAK: "break"
+CONTINUE: "continue"
+PASS: "pass"
+REPEAT: "repeat"
+UNTIL: "until"
+
+// NAME por último (captura o que sobrou - variáveis, funções, etc.)
 NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
 NUMBER: /\d+(\.\d+)?/
 

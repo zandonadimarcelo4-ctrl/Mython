@@ -108,10 +108,13 @@ with st.sidebar:
     
     ### Comandos Básicos:
     - `say "texto"` → `print("texto")`
-    - `ask name "prompt"` → `name = input("prompt")`
-    - `if x is over 10:` → `if x > 10:`
-    - `repeat 5 times:` → `for _ in range(5):`
-    - `for each item in list:` → `for item in list:`
+    - `ask number idade "prompt"` → `idade = int(input("prompt"))`
+    - `ask nome "prompt"` → `nome = input("prompt")`
+    - `if idade > 18:` → `if idade > 18:`
+    - `while idade < 18:` → `while idade < 18:`
+    - `for item in lista:` → `for item in lista:`
+    - `repeat 5:` → `for _ in range(5):`
+    - `func soma(a, b):` → `def soma(a, b):`
     """)
     
     # Sistema de i18n
@@ -168,7 +171,9 @@ with st.sidebar:
         "Hello World",
         "Verificar Idade",
         "Verificar Idade (Português) 🌍",
-        "Lista de Nomes",
+        "Loop While",
+        "Loop For",
+        "Loop Repeat",
         "Função Soma",
         "Loop com Condição",
         "Operadores Naturais"
@@ -222,43 +227,45 @@ senão:
 
     dizer "Você é menor"''',
     
-    "Lista de Nomes": '''list names = ["Alice", "Bob", "Charlie"]
+    "Loop While": '''age = 0
+
+while age < 18:
+
+    say age
+
+    age = age + 1
+
+say "Now you are 18!"''',
+    
+    "Loop For": '''names = ["Alice", "Bob", "Charlie"]
 
 say "Names:"
 
-for each name in names:
-
-    say name
-
-add "David" to names
-
-say "After adding David:"
-
-for each name in names:
+for name in names:
 
     say name''',
     
-    "Função Soma": '''define add(a, b):
+    "Loop Repeat": '''repeat 5:
 
-    set result = a + b
-
-    return result
-
-set sum1 = add(5, 3)
-
-set sum2 = add(10, 20)
-
-say "5 + 3 = " + str(sum1)
-
-say "10 + 20 = " + str(sum2)''',
+    say "Hello!"''',
     
-    "Loop com Condição": '''set count = 0
+    "Função Soma": '''func soma(a, b):
+
+    return a + b
+
+resultado = soma(5, 3)
+
+say resultado
+
+say soma(10, 20)''',
+    
+    "Loop com Condição": '''count = 0
 
 while count < 5:
 
     say "Count: " + str(count)
 
-    set count = count + 1
+    count = count + 1
 
 say "Done!"''',
     
