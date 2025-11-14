@@ -266,7 +266,7 @@ class MythonTransformer(Transformer):
     
     def call_stmt(self, children: List[Any]) -> str:
         """
-        call_stmt: function_call
+        call_stmt: (NAME | attribute_access) "(" args? ")"
         
         CORRIGIDO: Permite chamar funções diretamente sem atribuição.
         Exemplo: requests.post("https://api.example.com", data=data)
@@ -274,20 +274,25 @@ class MythonTransformer(Transformer):
         if not children:
             return ""
         
-        # O primeiro child é a chamada de função já transformada
-        call_expr = children[0]
+        # children: [NAME ou attribute_access, "(", args?, ")"]
+        # Filtrar parênteses
+        filtered = [c for c in children if not (isinstance(c, Token) and c.value in ['(', ')'])]
         
-        # Se já é string, retornar com indentação
-        if isinstance(call_expr, str):
-            return self.indent() + call_expr
+        if not filtered:
+            return ""
         
-        # Se é Tree, transformar para string
-        if isinstance(call_expr, Tree):
-            call_str = self._expr(call_expr)
-            return self.indent() + call_str
+        # Primeiro é NAME ou attribute_access (nome da função), segundo é args
+        func_name = self._expr(filtered[0])
+        args_str = ""
         
-        # Fallback: converter para string
-        return self.indent() + str(call_expr)
+        if len(filtered) > 1:
+            # Args já transformado
+            args_str = self._args(filtered[1])
+        
+        # Construir chamada
+        call_str = f"{func_name}({args_str})"
+        
+        return self.indent() + call_str
     
     # ============================================
     # Saída
@@ -946,33 +951,45 @@ class MythonTransformer(Transformer):
         
         CORRIGIDO: Retorna expressão com operador or.
         """
-        if len(children) < 2:
-            return self._expr(children[0]) if children else ""
-        left = self._expr(children[0])
-        right = self._expr(children[1])
+        # Filtrar token OR
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type == 'OR')]
+        
+        if len(filtered) < 2:
+            return self._expr(filtered[0]) if filtered else ""
+        
+        left = self._expr(filtered[0])
+        right = self._expr(filtered[1])
         return f"({left} or {right})"
     
     def and_expr(self, children: List[Any]) -> str:
         """
-        and_expr: logical_and AND comparison
+        and_expr: logical_and AND logical_not
         
         CORRIGIDO: Retorna expressão com operador and.
         """
-        if len(children) < 2:
-            return self._expr(children[0]) if children else ""
-        left = self._expr(children[0])
-        right = self._expr(children[1])
+        # Filtrar token AND
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type == 'AND')]
+        
+        if len(filtered) < 2:
+            return self._expr(filtered[0]) if filtered else ""
+        
+        left = self._expr(filtered[0])
+        right = self._expr(filtered[1])
         return f"({left} and {right})"
     
     def not_expr(self, children: List[Any]) -> str:
         """
-        not_expr: NOT comparison
+        not_expr: NOT comparison | NOT atom
         
         CORRIGIDO: Retorna expressão com operador not.
         """
-        if not children:
+        # Filtrar token NOT
+        filtered = [c for c in children if not (isinstance(c, Token) and c.type == 'NOT')]
+        
+        if not filtered:
             return ""
-        expr = self._expr(children[0])
+        
+        expr = self._expr(filtered[0])
         return f"(not {expr})"
     
     def condition(self, args: List[Any]) -> str:
